@@ -1,18 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AGENT AMAR — Autonomous Mail Intelligence</title>
-  
+  <title>AGENT AMAR — Autonomous Email Intelligence & Deadline Escalation</title>
+  <meta name="description" content="AGENT AMAR is an autonomous multi-agent email intelligence system designed to protect students and high-velocity professionals from missing critical deadlines, placements, and high-priority actions.">
+
   <!-- Google Fonts: Bricolage Grotesque, Geist, Geist Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;700;800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;700;800&family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Material Symbols & Icons -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-  
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -26,14 +27,20 @@
               surface: '#234C6A',
               slate: '#456882',
               beige: '#D2C1B6',
-              bg: '#0f171e',
-              card: '#1e384c',
-              border: 'rgba(69, 104, 130, 0.45)',
+              bg: '#0B1116',
+              card: '#162838',
+              cardHover: '#1c3347',
+              border: 'rgba(69, 104, 130, 0.4)',
+              borderLight: 'rgba(210, 193, 182, 0.18)',
               text: '#F0F4F8',
               muted: '#9CB3C9',
-              critical: '#FF5C5C',
+              subtle: '#6B879E',
+              critical: '#FF5252',
+              criticalGlow: 'rgba(255, 82, 82, 0.25)',
               success: '#38D39F',
-              warning: '#F6C90E'
+              warning: '#F6C90E',
+              accent: '#AACAE7',
+              accentDark: '#10334A'
             }
           },
           fontFamily: {
@@ -42,898 +49,1180 @@
             mono: ['"Geist Mono"', 'monospace']
           },
           boxShadow: {
-            'glow-beige': '0 0 25px rgba(210, 193, 182, 0.2)',
-            'glow-critical': '0 0 25px rgba(255, 92, 92, 0.25)',
-            'glow-success': '0 0 20px rgba(56, 211, 159, 0.25)',
-            'card-elevated': '0 10px 30px -5px rgba(0, 0, 0, 0.35)'
+            'glow-beige': '0 0 35px rgba(210, 193, 182, 0.15)',
+            'glow-critical': '0 0 35px rgba(255, 82, 82, 0.3)',
+            'glow-accent': '0 0 30px rgba(170, 202, 231, 0.2)',
+            'card-elevated': '0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(69, 104, 130, 0.25)'
+          },
+          animation: {
+            'pulse-subtle': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'radar': 'radar 3s linear infinite'
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-8px)' }
+            },
+            radar: {
+              '0%': { transform: 'scale(0.95)', opacity: '0.8' },
+              '100%': { transform: 'scale(1.8)', opacity: '0' }
+            }
           }
         }
       }
     }
   </script>
-  
+
   <style>
     body {
-      background-color: #0c1217;
+      background-color: #0B1116;
       color: #F0F4F8;
       font-family: 'Geist', sans-serif;
       overflow-x: hidden;
+      selection-background-color: #AACAE7;
+      selection-color: #10334A;
     }
     
     .font-brand { font-family: 'Bricolage Grotesque', sans-serif; }
-    .font-mono-timer { font-family: 'Geist Mono', monospace; font-variant-numeric: tabular-nums; }
+    .font-mono { font-family: 'Geist Mono', monospace; font-variant-numeric: tabular-nums; }
     
-    /* Subtle Pulse Animation */
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(1.15); }
-    }
-    .animate-pulse-glow {
-      animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    /* Custom Scrollbar for sleek mobile view */
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(69, 104, 130, 0.5); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #D2C1B6; }
-    
-    .screen-view {
-      display: none;
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.22s ease, transform 0.22s ease;
-    }
-    .screen-view.active {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
+    /* Sleek custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0B1116; }
+    ::-webkit-scrollbar-thumb { background: #234C6A; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #456882; }
+
+    /* Glassmorphism utility */
+    .glass-card {
+      background: rgba(22, 40, 56, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(69, 104, 130, 0.35);
     }
     
-    /* Device Mockup Shell */
-    .mobile-viewport {
-      width: 100%;
-      max-width: 412px;
-      min-height: 892px;
-      background-color: #1B3C53;
-      border: 1px solid rgba(69, 104, 130, 0.4);
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(35, 76, 106, 0.3);
+    .glass-card-hover {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-hover:hover {
+      background: rgba(28, 51, 71, 0.85);
+      border-color: rgba(170, 202, 231, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.5), 0 0 20px rgba(69, 104, 130, 0.25);
+    }
+
+    /* Ambient background glowing orbs */
+    .bg-gradient-radial {
+      background-image: radial-gradient(circle at 50% 0%, rgba(35, 76, 106, 0.35) 0%, rgba(11, 17, 22, 0) 70%);
+    }
+
+    .code-block {
+      background: #080D11;
+      border: 1px solid rgba(69, 104, 130, 0.3);
+      border-radius: 8px;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start sm:py-6 sm:px-4 bg-[#0a0f13]">
+<body class="antialiased text-slate-100 bg-[#0B1116] min-h-screen">
 
-  <!-- Top Simulator Bar (Visible on desktop/tablet) -->
-  <header class="w-full max-w-5xl mb-4 hidden sm:flex items-center justify-between px-4 py-3 bg-[#132330] rounded-2xl border border-brand-slate/30 text-xs">
-    <div class="flex items-center gap-3">
-      <div class="w-7 h-7 rounded-xl bg-brand-beige text-brand-navy font-brand font-bold flex items-center justify-center text-sm shadow-glow-beige">
-        AM
+  <!-- Ambient Top Glow -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] bg-gradient-radial pointer-events-none -z-10"></div>
+  <div class="fixed -top-40 right-10 w-96 h-96 bg-brand-surface/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
+  <div class="fixed top-1/2 -left-40 w-96 h-96 bg-brand-slate/15 rounded-full blur-3xl pointer-events-none -z-10"></div>
+
+  <!-- ========================================================================= -->
+  <!-- NAVIGATION BAR                                                            -->
+  <!-- ========================================================================= -->
+  <nav class="sticky top-0 z-50 glass-card border-b border-brand-border/60 bg-[#0B1116]/85 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Status -->
+        <a href="#hero" class="flex items-center space-x-3 group">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-accent to-brand-slate flex items-center justify-center shadow-glow-accent group-hover:scale-105 transition-transform">
+            <span class="material-symbols-outlined text-brand-accentDark text-xl font-bold">radar</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-brand font-extrabold text-lg tracking-wider text-white">AGENT AMAR</span>
+            <span class="text-[10px] font-mono text-brand-muted tracking-widest uppercase flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-success animate-pulse"></span>
+              Autonomous Mail Intelligence
+            </span>
+          </div>
+        </a>
+
+        <!-- Nav Links Desktop -->
+        <div class="hidden md:flex items-center space-x-1 font-medium text-sm text-brand-muted">
+          <a href="#problem-solution" class="px-3 py-2 rounded-md hover:text-white hover:bg-brand-surface/40 transition">The Problem</a>
+          <a href="#multi-agent-system" class="px-3 py-2 rounded-md hover:text-white hover:bg-brand-surface/40 transition">5 Agents</a>
+          <a href="#pipeline-simulator" class="px-3 py-2 rounded-md hover:text-white hover:bg-brand-surface/40 transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs text-brand-warning">bolt</span> Live Simulator
+          </a>
+          <a href="#mobile-app" class="px-3 py-2 rounded-md hover:text-white hover:bg-brand-surface/40 transition">Mobile App</a>
+          <a href="#api-reference" class="px-3 py-2 rounded-md hover:text-white hover:bg-brand-surface/40 transition">API Contract</a>
+          <a href="#quickstart" class="px-3 py-2 rounded-md hover:text-white hover:bg-brand-surface/40 transition">Quickstart</a>
+        </div>
+
+        <!-- Right Action Buttons -->
+        <div class="flex items-center space-x-3">
+          <a href="#pipeline-simulator" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-brand-surface border border-brand-border text-brand-text hover:bg-brand-slate hover:border-brand-accent/40 transition">
+            <span class="material-symbols-outlined text-sm text-brand-accent">play_circle</span> Try Simulation
+          </a>
+          <a href="#quickstart" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold bg-brand-accent text-brand-accentDark hover:bg-white transition shadow-glow-accent">
+            <span class="material-symbols-outlined text-sm">rocket_launch</span> Launch
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========================================================================= -->
+  <!-- HERO SECTION                                                              -->
+  <!-- ========================================================================= -->
+  <section id="hero" class="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Top Announcement Pill -->
+      <div class="flex justify-center mb-8">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-card/90 border border-brand-border text-xs font-medium text-brand-text shadow-card-elevated">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-brand-critical/20 text-brand-critical border border-brand-critical/30">LIFESAVER</span>
+          <span>Zero Missed Placement & Academic Deadlines</span>
+          <span class="material-symbols-outlined text-xs text-brand-accent">arrow_forward</span>
+        </div>
+      </div>
+
+      <!-- Main Headline & Subtitle -->
+      <div class="text-center max-w-4xl mx-auto">
+        <h1 class="font-brand text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08]">
+          Autonomous Mail Intelligence <br class="hidden sm:block">
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-brand-accent via-brand-beige to-white">
+            Before Deadlines Expire.
+          </span>
+        </h1>
+        <p class="mt-6 text-lg sm:text-xl text-brand-muted max-w-2xl mx-auto leading-relaxed">
+          Not another email client. AGENT AMAR is a specialized multi-agent AI system that constantly watches your inbox, extracts actionable deadlines, calculates urgency, and sounds the alarm before career-defining cutoffs slip away.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <a href="#pipeline-simulator" class="px-6 py-3.5 rounded-xl font-brand font-bold text-sm bg-brand-accent text-brand-accentDark hover:bg-white transition flex items-center gap-2 shadow-glow-accent">
+            <span class="material-symbols-outlined text-lg">play_arrow</span> Run Live Agent Pipeline
+          </a>
+          <a href="#problem-solution" class="px-6 py-3.5 rounded-xl font-brand font-semibold text-sm bg-brand-card border border-brand-border text-white hover:bg-brand-surface hover:border-brand-accent/50 transition flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg text-brand-accent">help_outline</span> Why It Matters
+          </a>
+          <a href="#api-reference" class="px-6 py-3.5 rounded-xl font-brand font-semibold text-sm bg-transparent border border-brand-border/60 text-brand-muted hover:text-white hover:border-brand-border transition flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">code</span> API Documentation
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+        <div class="glass-card p-5 rounded-2xl text-center border-brand-border/40">
+          <div class="text-3xl lg:text-4xl font-brand font-extrabold text-brand-accent">5 Agents</div>
+          <div class="text-xs text-brand-muted mt-1 uppercase tracking-wider font-mono">Specialized Multi-Agent AI</div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl text-center border-brand-border/40">
+          <div class="text-3xl lg:text-4xl font-brand font-extrabold text-brand-warning">15 Types</div>
+          <div class="text-xs text-brand-muted mt-1 uppercase tracking-wider font-mono">Zero-Shot Triage Categories</div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl text-center border-brand-border/40">
+          <div class="text-3xl lg:text-4xl font-brand font-extrabold text-brand-critical">4-Tier</div>
+          <div class="text-xs text-brand-muted mt-1 uppercase tracking-wider font-mono">Urgency Escalation Ladder</div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl text-center border-brand-border/40">
+          <div class="text-3xl lg:text-4xl font-brand font-extrabold text-brand-success">100%</div>
+          <div class="text-xs text-brand-muted mt-1 uppercase tracking-wider font-mono">Deterministic Safety Net</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- THE PROBLEM VS SOLUTION (THE 4:30 PM DILEMMA)                             -->
+  <!-- ========================================================================= -->
+  <section id="problem-solution" class="py-20 border-t border-brand-border/40 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold text-brand-critical tracking-widest uppercase bg-brand-critical/10 px-3 py-1 rounded-full border border-brand-critical/20">The Real-World Dilemma</span>
+        <h2 class="font-brand text-3xl sm:text-5xl font-extrabold text-white mt-4">
+          The 4:30 PM Placement Dilemma
+        </h2>
+        <p class="text-brand-muted mt-3 text-base sm:text-lg">
+          College students and professionals are flooded with hundreds of emails daily. The most critical ones arrive with dangerously short notice.
+        </p>
+      </div>
+
+      <!-- Before vs After Comparison Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        
+        <!-- TRADITIONAL EMAIL (THE PROBLEM) -->
+        <div class="glass-card p-8 rounded-3xl border-red-500/20 bg-red-950/10 relative overflow-hidden">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+              <span class="material-symbols-outlined">mail_lock</span>
+            </div>
+            <div>
+              <h3 class="font-brand text-xl font-bold text-red-200">The Traditional Nightmare</h3>
+              <p class="text-xs text-red-400/80 font-mono">Standard Gmail / Outlook App</p>
+            </div>
+          </div>
+
+          <div class="space-y-4 text-sm text-slate-300">
+            <div class="p-3.5 rounded-xl bg-red-900/20 border border-red-500/20 flex gap-3 items-start">
+              <span class="material-symbols-outlined text-red-400 shrink-0 text-lg">close</span>
+              <p><strong class="text-white">4:30 PM:</strong> Placement Cell sends a urgent internship application link with a <strong class="text-red-300">5:00 PM strict cutoff</strong>.</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-red-900/20 border border-red-500/20 flex gap-3 items-start">
+              <span class="material-symbols-outlined text-red-400 shrink-0 text-lg">close</span>
+              <p><strong class="text-white">Buried Under Noise:</strong> 87 promotional discounts, student group threads, and newsletters push the email out of sight.</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-red-900/20 border border-red-500/20 flex gap-3 items-start">
+              <span class="material-symbols-outlined text-red-400 shrink-0 text-lg">close</span>
+              <p><strong class="text-white">5:15 PM:</strong> Student casually opens inbox. Form link is already closed. Opportunity permanently lost.</p>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-red-500/20 flex items-center justify-between text-xs font-mono text-red-400">
+            <span>Result: Stress, regret, missed careers</span>
+            <span class="font-bold">❌ FAILED</span>
+          </div>
+        </div>
+
+        <!-- AGENT AMAR (THE SOLUTION) -->
+        <div class="glass-card p-8 rounded-3xl border-emerald-500/30 bg-emerald-950/10 relative overflow-hidden shadow-glow-success">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <span class="material-symbols-outlined">security</span>
+            </div>
+            <div>
+              <h3 class="font-brand text-xl font-bold text-emerald-200">The AGENT AMAR Shield</h3>
+              <p class="text-xs text-emerald-400/80 font-mono">Autonomous AI Escalation Engine</p>
+            </div>
+          </div>
+
+          <div class="space-y-4 text-sm text-slate-300">
+            <div class="p-3.5 rounded-xl bg-emerald-900/20 border border-emerald-500/20 flex gap-3 items-start">
+              <span class="material-symbols-outlined text-emerald-400 shrink-0 text-lg">check_circle</span>
+              <p><strong class="text-white">4:31 PM:</strong> Incremental sync ingests email. Triage classifies <strong class="text-emerald-300">PLACEMENT (0.95 conf)</strong>, Action extracts <strong class="text-emerald-300">FORM_SUBMISSION</strong>, Deadline sets <strong class="text-emerald-300">5:00 PM UTC</strong>.</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-emerald-900/20 border border-emerald-500/20 flex gap-3 items-start">
+              <span class="material-symbols-outlined text-emerald-400 shrink-0 text-lg">check_circle</span>
+              <p><strong class="text-white">4:45 PM:</strong> Escalation monitor triggers <strong class="text-yellow-300">URGENT</strong> channel mobile notification with remaining time counter.</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-emerald-900/20 border border-emerald-500/20 flex gap-3 items-start">
+              <span class="material-symbols-outlined text-emerald-400 shrink-0 text-lg">check_circle</span>
+              <p><strong class="text-white">4:55 PM:</strong> If still unhandled, full-screen <strong class="text-red-400">ALARM DIALOG</strong> sounds on mobile with 1-tap "Open Form" and "Mark Done".</p>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-emerald-500/20 flex items-center justify-between text-xs font-mono text-emerald-400">
+            <span>Result: Zero anxiety, 100% submission rate</span>
+            <span class="font-bold">✅ SECURED</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- MULTI-AGENT ARCHITECTURE (THE 5 WORKERS)                                   -->
+  <!-- ========================================================================= -->
+  <section id="multi-agent-system" class="py-20 border-t border-brand-border/40 bg-gradient-to-b from-[#0B1116] via-[#111c24] to-[#0B1116]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold text-brand-accent tracking-widest uppercase bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">Modular Intelligence</span>
+        <h2 class="font-brand text-3xl sm:text-5xl font-extrabold text-white mt-4">
+          5 Specialized AI Agents + 1 Orchestrator
+        </h2>
+        <p class="text-brand-muted mt-3 text-base sm:text-lg">
+          Instead of a generic LLM prompt, AGENT AMAR utilizes a strictly typed, pipeline of isolated domain agents with deterministic fallback guarantees.
+        </p>
+      </div>
+
+      <!-- Agent Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        
+        <!-- AGENT 1: INTAKE -->
+        <div class="glass-card glass-card-hover p-6 rounded-2xl border-brand-border">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-accent/10 border border-brand-accent/30 flex items-center justify-center text-brand-accent">
+              <span class="material-symbols-outlined">inbox_customize</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-brand-muted bg-brand-card px-2 py-0.5 rounded border border-brand-border">AGENT 01</span>
+          </div>
+          <h3 class="font-brand font-bold text-lg text-white">Mail Intake Agent</h3>
+          <p class="text-xs text-brand-muted mt-2 leading-relaxed">
+            Normalizes raw RFC 2822 emails into sanitized, structured payloads. Extracts clean plain text, sender domains, recipients, and generates concise 240-char snippets.
+          </p>
+          <div class="mt-4 pt-3 border-t border-brand-border/40 text-[11px] font-mono text-brand-subtle flex items-center justify-between">
+            <span>Input: Raw Gmail API</span>
+            <span class="text-brand-accent">Output: NormalizedEmail</span>
+          </div>
+        </div>
+
+        <!-- AGENT 2: TRIAGE -->
+        <div class="glass-card glass-card-hover p-6 rounded-2xl border-brand-border">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <span class="material-symbols-outlined">category</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-brand-muted bg-brand-card px-2 py-0.5 rounded border border-brand-border">AGENT 02</span>
+          </div>
+          <h3 class="font-brand font-bold text-lg text-white">Triage Agent</h3>
+          <p class="text-xs text-brand-muted mt-2 leading-relaxed">
+            Classifies email intent into 15 domain categories (Internship, Placement, Assignment, Exam, Reply Required, Faculty, Spam, etc.) with strict confidence metrics.
+          </p>
+          <div class="mt-4 pt-3 border-t border-brand-border/40 text-[11px] font-mono text-brand-subtle flex items-center justify-between">
+            <span>15 Distinct Classes</span>
+            <span class="text-purple-400">Confidence: 0.0 - 1.0</span>
+          </div>
+        </div>
+
+        <!-- AGENT 3: ACTION -->
+        <div class="glass-card glass-card-hover p-6 rounded-2xl border-brand-border">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <span class="material-symbols-outlined">task_alt</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-brand-muted bg-brand-card px-2 py-0.5 rounded border border-brand-border">AGENT 03</span>
+          </div>
+          <h3 class="font-brand font-bold text-lg text-white">Action Agent</h3>
+          <p class="text-xs text-brand-muted mt-2 leading-relaxed">
+            Extracts concrete tasks (`FORM_SUBMISSION`, `DOCUMENT_UPLOAD`, `REPLY`, `PAYMENT`, `ATTEND_EVENT`) along with blocking flags and target web links.
+          </p>
+          <div class="mt-4 pt-3 border-t border-brand-border/40 text-[11px] font-mono text-brand-subtle flex items-center justify-between">
+            <span>9 Action Types</span>
+            <span class="text-emerald-400">Blocking vs Optional</span>
+          </div>
+        </div>
+
+        <!-- AGENT 4: DEADLINE -->
+        <div class="glass-card glass-card-hover p-6 rounded-2xl border-brand-border">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <span class="material-symbols-outlined">hourglass_top</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-brand-muted bg-brand-card px-2 py-0.5 rounded border border-brand-border">AGENT 04</span>
+          </div>
+          <h3 class="font-brand font-bold text-lg text-white">Deadline Agent</h3>
+          <p class="text-xs text-brand-muted mt-2 leading-relaxed">
+            Parses explicit and natural temporal phrases into ISO 8601 UTC datetimes. Detects ambiguous expressions, handles timezones, and sets proximity buckets.
+          </p>
+          <div class="mt-4 pt-3 border-t border-brand-border/40 text-[11px] font-mono text-brand-subtle flex items-center justify-between">
+            <span>Temporal Engine</span>
+            <span class="text-amber-400">UTC Normalization</span>
+          </div>
+        </div>
+
+        <!-- AGENT 5: PRIORITY -->
+        <div class="glass-card glass-card-hover p-6 rounded-2xl border-brand-border">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-critical/10 border border-brand-critical/30 flex items-center justify-center text-brand-critical">
+              <span class="material-symbols-outlined">speed</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-brand-muted bg-brand-card px-2 py-0.5 rounded border border-brand-border">AGENT 05</span>
+          </div>
+          <h3 class="font-brand font-bold text-lg text-white">Priority Agent</h3>
+          <p class="text-xs text-brand-muted mt-2 leading-relaxed">
+            Multi-factor scoring algorithm calculating an integer score (0–100) mapped into 5 priority tiers (`CRITICAL`, `URGENT`, `HIGH`, `MEDIUM`, `LOW`).
+          </p>
+          <div class="mt-4 pt-3 border-t border-brand-border/40 text-[11px] font-mono text-brand-subtle flex items-center justify-between">
+            <span>Score: 0 to 100</span>
+            <span class="text-brand-critical">5 Urgency Bands</span>
+          </div>
+        </div>
+
+        <!-- ORCHESTRATOR -->
+        <div class="glass-card glass-card-hover p-6 rounded-2xl border-brand-accent/40 bg-brand-surface/30">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-accent text-brand-accentDark flex items-center justify-center font-bold">
+              <span class="material-symbols-outlined">hub</span>
+            </div>
+            <span class="text-[11px] font-mono font-bold text-brand-accent bg-brand-accentDark px-2 py-0.5 rounded border border-brand-accent/40">CORE</span>
+          </div>
+          <h3 class="font-brand font-bold text-lg text-white">AMAR Orchestrator</h3>
+          <p class="text-xs text-brand-muted mt-2 leading-relaxed">
+            Resolves cross-agent conflicts, compiles execution traces, computes human review flags, and constructs the Final Decision Object with routing directives.
+          </p>
+          <div class="mt-4 pt-3 border-t border-brand-border/40 text-[11px] font-mono text-brand-accent flex items-center justify-between">
+            <span>Conflict Resolution</span>
+            <span>Routing Directives</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- INTERACTIVE LIVE PIPELINE SIMULATOR                                       -->
+  <!-- ========================================================================= -->
+  <section id="pipeline-simulator" class="py-20 border-t border-brand-border/40 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <span class="text-xs font-mono font-bold text-brand-warning tracking-widest uppercase bg-brand-warning/10 px-3 py-1 rounded-full border border-brand-warning/20">Interactive Demo</span>
+        <h2 class="font-brand text-3xl sm:text-5xl font-extrabold text-white mt-4">
+          Live Agent Pipeline Simulator
+        </h2>
+        <p class="text-brand-muted mt-3 text-base sm:text-lg">
+          Select a sample high-stakes email or type your own, and watch the 5 agents process, score, extract deadlines, and trigger alert policies in real time.
+        </p>
+      </div>
+
+      <!-- Simulator Container -->
+      <div class="glass-card rounded-3xl p-6 sm:p-8 max-w-5xl mx-auto border-brand-border shadow-2xl">
+        
+        <!-- Preset Selector Pills -->
+        <div class="flex flex-wrap items-center gap-2 mb-6">
+          <span class="text-xs font-mono text-brand-muted uppercase mr-2">Presets:</span>
+          <button onclick="loadPreset('placement')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-surface text-brand-text hover:bg-brand-slate transition border border-brand-border focus:ring-2 focus:ring-brand-accent">
+            🎓 TCS Placement (30m Deadline)
+          </button>
+          <button onclick="loadPreset('internship')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-surface text-brand-text hover:bg-brand-slate transition border border-brand-border focus:ring-2 focus:ring-brand-accent">
+            💼 Google Internship (4h Cutoff)
+          </button>
+          <button onclick="loadPreset('assignment')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-surface text-brand-text hover:bg-brand-slate transition border border-brand-border focus:ring-2 focus:ring-brand-accent">
+            📝 AI Lab Assignment 4
+          </button>
+          <button onclick="loadPreset('promo')" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-surface text-brand-text hover:bg-brand-slate transition border border-brand-border focus:ring-2 focus:ring-brand-accent">
+            🍕 Food Delivery 50% Off
+          </button>
+        </div>
+
+        <!-- Input Fields -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Left: Email Content Input -->
+          <div class="lg:col-span-6 space-y-3">
+            <div class="space-y-1">
+              <label class="text-xs font-mono text-brand-muted">Sender & Address</label>
+              <input id="sim-sender" type="text" value="Placement Officer <placement@college.edu>" class="w-full bg-[#080D11] border border-brand-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-accent font-sans">
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-mono text-brand-muted">Subject</label>
+              <input id="sim-subject" type="text" value="URGENT: TCS Digital Registration Form - Closes Today 5:00 PM" class="w-full bg-[#080D11] border border-brand-border rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-accent font-sans font-medium">
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-mono text-brand-muted">Email Body Text</label>
+              <textarea id="sim-body" rows="6" class="w-full bg-[#080D11] border border-brand-border rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-brand-accent font-sans resize-none">Dear Students, TCS Digital campus drive applications are now open for final year students. Please submit your updated resume and complete the registration form at https://tcs.careers/drive2026 before 5:00 PM today strictly. Late submissions will not be considered under any circumstances.</textarea>
+            </div>
+
+            <button onclick="runPipelineSimulation()" id="sim-run-btn" class="w-full py-3.5 rounded-xl font-brand font-bold text-sm bg-gradient-to-r from-brand-accent via-brand-beige to-white text-brand-accentDark hover:opacity-90 transition flex items-center justify-center gap-2 shadow-glow-accent">
+              <span class="material-symbols-outlined text-lg">play_arrow</span> Execute Multi-Agent Pipeline
+            </button>
+          </div>
+
+          <!-- Right: Live Pipeline Output & Decision Inspector -->
+          <div class="lg:col-span-6 bg-[#080D11] border border-brand-border rounded-2xl p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-brand-border/40">
+                <span class="text-xs font-mono font-bold text-brand-accent flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-brand-success"></span>
+                  AGENT TRACE & DECISION
+                </span>
+                <span id="sim-timer" class="text-xs font-mono text-brand-muted">Latency: ~34ms</span>
+              </div>
+
+              <!-- Live Analysis Results -->
+              <div id="sim-results" class="mt-4 space-y-3.5">
+                
+                <!-- Category & Priority Row -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="p-3 rounded-xl bg-brand-card/60 border border-brand-border/40">
+                    <span class="text-[10px] font-mono uppercase text-brand-muted block">Triage Category</span>
+                    <span id="res-category" class="font-brand font-bold text-sm text-purple-300">PLACEMENT</span>
+                    <span id="res-confidence" class="text-[10px] font-mono text-brand-muted block mt-0.5">Confidence: 95%</span>
+                  </div>
+                  <div class="p-3 rounded-xl bg-brand-card/60 border border-brand-border/40">
+                    <span class="text-[10px] font-mono uppercase text-brand-muted block">Priority Score</span>
+                    <span id="res-priority" class="font-brand font-bold text-sm text-red-400">CRITICAL (92/100)</span>
+                    <span id="res-band" class="text-[10px] font-mono text-brand-muted block mt-0.5">Proximity: WITHIN_1H</span>
+                  </div>
+                </div>
+
+                <!-- Extracted Action & Deadline -->
+                <div class="p-3 rounded-xl bg-brand-card/60 border border-brand-border/40 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-mono uppercase text-brand-muted">Detected Action</span>
+                    <span id="res-action-type" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">FORM_SUBMISSION</span>
+                  </div>
+                  <p id="res-action-desc" class="text-xs text-slate-200">Submit updated resume & complete registration</p>
+                  <div class="flex items-center justify-between pt-2 border-t border-brand-border/30">
+                    <span class="text-[10px] font-mono text-brand-muted">Extracted Deadline:</span>
+                    <span id="res-deadline" class="text-xs font-mono font-bold text-amber-300">Today, 5:00 PM UTC</span>
+                  </div>
+                </div>
+
+                <!-- Generated Alert Escalation State -->
+                <div id="res-alert-box" class="p-3.5 rounded-xl bg-red-950/30 border border-red-500/40 flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-red-400 text-xl animate-bounce">alarm</span>
+                    <div>
+                      <div class="text-xs font-brand font-bold text-red-200" id="res-escalation-title">ESCALATION: ALARM TRIGGERED</div>
+                      <div class="text-[10px] text-red-400 font-mono" id="res-escalation-desc">requires_alarm: true • Device sound + AlarmDialog</div>
+                    </div>
+                  </div>
+                  <span class="px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-red-500 text-white">ACTIVE</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Footer summary -->
+            <div class="mt-4 pt-3 border-t border-brand-border/30 text-[11px] font-mono text-brand-muted flex items-center justify-between">
+              <span>Routing: <strong class="text-white">Store + Notify + Monitor</strong></span>
+              <span class="text-brand-accent">Folder: AMAR/Opportunities</span>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- MOBILE APP SHOWCASE & INTERACTIVE PREVIEW                                 -->
+  <!-- ========================================================================= -->
+  <section id="mobile-app" class="py-20 border-t border-brand-border/40 bg-[#0B1116]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold text-brand-accent tracking-widest uppercase bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">Flutter Mobile Frontend</span>
+        <h2 class="font-brand text-3xl sm:text-5xl font-extrabold text-white mt-4">
+          Experience AGENT AMAR Mobile
+        </h2>
+        <p class="text-brand-muted mt-3 text-base sm:text-lg">
+          Explore all 5 key screens of the completed Flutter application built with custom dark-mode typography, live countdown timers, action bottom sheets, and full-screen alarm modals.
+        </p>
+      </div>
+
+      <!-- Interactive Tabbed Phone Mockup Preview -->
+      <div class="max-w-4xl mx-auto glass-card rounded-3xl p-6 sm:p-10 border-brand-border">
+        
+        <!-- Screen Switcher Tabs -->
+        <div class="flex flex-wrap items-center justify-center gap-2 mb-8">
+          <button onclick="switchMobileScreen('home')" id="tab-home" class="px-4 py-2 rounded-xl text-xs font-brand font-bold bg-brand-accent text-brand-accentDark transition flex items-center gap-1.5 shadow-glow-accent">
+            <span class="material-symbols-outlined text-sm">home</span> 1. Smart Inbox
+          </button>
+          <button onclick="switchMobileScreen('attention')" id="tab-attention" class="px-4 py-2 rounded-xl text-xs font-brand font-bold bg-brand-surface text-brand-muted hover:text-white transition flex items-center gap-1.5 border border-brand-border">
+            <span class="material-symbols-outlined text-sm">task_alt</span> 2. Needs Attention
+          </button>
+          <button onclick="switchMobileScreen('deadlines')" id="tab-deadlines" class="px-4 py-2 rounded-xl text-xs font-brand font-bold bg-brand-surface text-brand-muted hover:text-white transition flex items-center gap-1.5 border border-brand-border">
+            <span class="material-symbols-outlined text-sm">event</span> 3. Deadlines
+          </button>
+          <button onclick="switchMobileScreen('reminders')" id="tab-reminders" class="px-4 py-2 rounded-xl text-xs font-brand font-bold bg-brand-surface text-brand-muted hover:text-white transition flex items-center gap-1.5 border border-brand-border">
+            <span class="material-symbols-outlined text-sm">notifications</span> 4. Reminders
+          </button>
+          <button onclick="switchMobileScreen('alarm')" id="tab-alarm" class="px-4 py-2 rounded-xl text-xs font-brand font-bold bg-red-950/60 text-red-300 hover:text-white transition flex items-center gap-1.5 border border-red-500/30">
+            <span class="material-symbols-outlined text-sm animate-pulse text-red-400">warning</span> 5. Alarm Alert
+          </button>
+        </div>
+
+        <!-- Phone Screen Frame -->
+        <div class="max-w-md mx-auto bg-[#142838] rounded-3xl border-2 border-brand-border/80 shadow-2xl p-4 overflow-hidden min-h-[520px] flex flex-col justify-between">
+          
+          <!-- Mock Phone Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-brand-border/40">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-brand-accent"></span>
+              <span class="font-brand font-bold text-sm text-white tracking-wide" id="phone-screen-title">SMART INBOX</span>
+            </div>
+            <span class="text-[10px] font-mono text-brand-muted" id="phone-time">16:45 PM • SYNCED</span>
+          </div>
+
+          <!-- Dynamic Screen View Content -->
+          <div id="phone-content" class="py-4 space-y-3 flex-1">
+            
+            <!-- HOME INBOX VIEW (DEFAULT) -->
+            <div id="screen-home" class="space-y-3">
+              <div class="p-3.5 rounded-2xl bg-[#1B3C53] border border-brand-border/60">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/30">CRITICAL • PLACEMENT</span>
+                  <span class="text-[10px] font-mono text-red-400 font-bold">14m left</span>
+                </div>
+                <h4 class="font-brand font-bold text-sm text-white mt-1.5">TCS Digital Registration Drive 2026</h4>
+                <p class="text-xs text-brand-muted mt-1">Please submit the registration form and upload your resume before 5:00 PM today...</p>
+                <div class="mt-2.5 pt-2 border-t border-brand-border/30 flex items-center justify-between text-[10px] font-mono text-brand-accent">
+                  <span>Task: FORM_SUBMISSION</span>
+                  <span class="underline">View Detail →</span>
+                </div>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-[#1B3C53] border border-brand-border/60">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">HIGH • INTERNSHIP</span>
+                  <span class="text-[10px] font-mono text-amber-300">4h left</span>
+                </div>
+                <h4 class="font-brand font-bold text-sm text-white mt-1.5">Google Summer Internship 2026</h4>
+                <p class="text-xs text-brand-muted mt-1">Summer engineering internship applications closing tonight at 9:00 PM...</p>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-[#1B3C53] border border-brand-border/60">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">ACADEMICS</span>
+                  <span class="text-[10px] font-mono text-brand-muted">Tomorrow</span>
+                </div>
+                <h4 class="font-brand font-bold text-sm text-white mt-1.5">Prof. Raman - Lab 4 Report Submission</h4>
+                <p class="text-xs text-brand-muted mt-1">Submit your completed Python Jupyter notebooks via portal...</p>
+              </div>
+            </div>
+
+            <!-- ATTENTION VIEW -->
+            <div id="screen-attention" class="space-y-3 hidden">
+              <div class="p-4 rounded-2xl bg-[#1B3C53] border border-red-500/30">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-brand font-bold text-red-300">PENDING ACTION #1</span>
+                  <span class="text-[10px] font-mono text-red-400 font-bold">14m left</span>
+                </div>
+                <p class="text-sm font-semibold text-white mt-1">Submit TCS Campus Application Form</p>
+                <div class="mt-3 flex gap-2">
+                  <button class="flex-1 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold">Mark Completed</button>
+                  <button class="px-3 py-1.5 rounded-lg bg-brand-surface text-brand-muted text-xs font-mono">Dismiss</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- DEADLINES VIEW -->
+            <div id="screen-deadlines" class="space-y-3 hidden">
+              <div class="p-3.5 rounded-2xl bg-[#1B3C53] border border-brand-border/60">
+                <div class="flex items-center justify-between text-xs font-mono">
+                  <span class="text-red-400 font-bold">🔴 WITHIN 1 HOUR</span>
+                  <span class="text-white">5:00 PM UTC</span>
+                </div>
+                <h4 class="font-brand font-bold text-sm text-white mt-1">TCS Digital Registration</h4>
+                <div class="text-[10px] font-mono text-brand-muted mt-1">Action: DOCUMENT_UPLOAD • Blocking: True</div>
+              </div>
+            </div>
+
+            <!-- REMINDERS VIEW -->
+            <div id="screen-reminders" class="space-y-3 hidden">
+              <div class="p-3.5 rounded-2xl bg-[#1B3C53] border border-brand-border/60">
+                <div class="flex items-center justify-between text-xs font-mono">
+                  <span class="text-brand-accent font-bold">⏰ SCHEDULED</span>
+                  <span class="text-white">18:30 PM Today</span>
+                </div>
+                <h4 class="font-brand font-bold text-sm text-white mt-1">Review Placement Form after class</h4>
+                <div class="text-[10px] font-mono text-brand-muted mt-1">Note: Check resume formatting</div>
+              </div>
+            </div>
+
+            <!-- ALARM MODAL VIEW -->
+            <div id="screen-alarm" class="p-5 rounded-2xl bg-red-950/80 border-2 border-red-500/60 shadow-glow-critical text-center space-y-4 hidden">
+              <div class="w-14 h-14 rounded-full bg-red-500/20 border border-red-500 flex items-center justify-center mx-auto text-red-400 animate-bounce">
+                <span class="material-symbols-outlined text-3xl">notifications_active</span>
+              </div>
+              <div>
+                <h4 class="font-brand font-extrabold text-lg text-white">CRITICAL DEADLINE ALARM</h4>
+                <p class="text-xs text-red-200 mt-1">TCS Digital Registration closes in 14 minutes. Immediate action required.</p>
+              </div>
+              <div class="space-y-2 pt-2">
+                <button class="w-full py-2.5 rounded-xl bg-red-500 text-white font-brand font-bold text-xs hover:bg-red-400 transition shadow-lg">OPEN APPLICATION EMAIL</button>
+                <div class="flex gap-2">
+                  <button class="flex-1 py-1.5 rounded-lg bg-red-900/40 border border-red-500/30 text-xs font-mono text-red-300">Snooze 10m</button>
+                  <button class="flex-1 py-1.5 rounded-lg bg-red-900/40 border border-red-500/30 text-xs font-mono text-red-300">Mark Handled</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Phone Bottom Navigation Bar -->
+          <div class="pt-3 border-t border-brand-border/40 flex items-center justify-around text-brand-muted">
+            <div class="flex flex-col items-center text-brand-accent">
+              <span class="material-symbols-outlined text-lg">home</span>
+              <span class="text-[9px] font-mono">Home</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="material-symbols-outlined text-lg">task_alt</span>
+              <span class="text-[9px] font-mono">Attention</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="material-symbols-outlined text-lg">event</span>
+              <span class="text-[9px] font-mono">Deadlines</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="material-symbols-outlined text-lg">notifications</span>
+              <span class="text-[9px] font-mono">Reminders</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- COMPLETE API REFERENCE & INTERACTIVE DOCUMENTATION                        -->
+  <!-- ========================================================================= -->
+  <section id="api-reference" class="py-20 border-t border-brand-border/40 bg-[#080D11]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold text-brand-accent tracking-widest uppercase bg-brand-accent/10 px-3 py-1 rounded-full border border-brand-accent/20">API Contract (Phase 12 / 13)</span>
+        <h2 class="font-brand text-3xl sm:text-5xl font-extrabold text-white mt-4">
+          Interactive API Documentation
+        </h2>
+        <p class="text-brand-muted mt-3 text-base sm:text-lg">
+          The AGENT AMAR backend is built with FastAPI & SQLite, providing frozen, deterministic REST endpoints for Gmail synchronization, multi-agent intelligence, reminders, and deadline monitoring.
+        </p>
+      </div>
+
+      <!-- API Explorer Card -->
+      <div class="glass-card rounded-3xl p-6 sm:p-8 max-w-6xl mx-auto border-brand-border">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Left: Endpoint List -->
+          <div class="lg:col-span-4 space-y-2">
+            <span class="text-xs font-mono text-brand-muted uppercase block mb-3">Core Endpoints</span>
+            
+            <button onclick="showApiDoc('sync')" class="w-full text-left p-3 rounded-xl bg-brand-surface border border-brand-accent/40 text-white text-xs font-mono font-medium flex items-center justify-between transition focus:ring-1 focus:ring-brand-accent">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">POST</span>
+                <span>/api/v1/gmail/sync</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+
+            <button onclick="showApiDoc('sync-status')" class="w-full text-left p-3 rounded-xl bg-brand-card hover:bg-brand-surface border border-brand-border text-brand-muted hover:text-white text-xs font-mono font-medium flex items-center justify-between transition">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">GET</span>
+                <span>/api/v1/gmail/sync/status</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+
+            <button onclick="showApiDoc('emails')" class="w-full text-left p-3 rounded-xl bg-brand-card hover:bg-brand-surface border border-brand-border text-brand-muted hover:text-white text-xs font-mono font-medium flex items-center justify-between transition">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">GET</span>
+                <span>/api/v1/emails</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+
+            <button onclick="showApiDoc('email-detail')" class="w-full text-left p-3 rounded-xl bg-brand-card hover:bg-brand-surface border border-brand-border text-brand-muted hover:text-white text-xs font-mono font-medium flex items-center justify-between transition">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">GET</span>
+                <span>/api/v1/emails/{id}</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+
+            <button onclick="showApiDoc('pending-actions')" class="w-full text-left p-3 rounded-xl bg-brand-card hover:bg-brand-surface border border-brand-border text-brand-muted hover:text-white text-xs font-mono font-medium flex items-center justify-between transition">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">GET</span>
+                <span>/api/v1/actions/pending</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+
+            <button onclick="showApiDoc('deadlines')" class="w-full text-left p-3 rounded-xl bg-brand-card hover:bg-brand-surface border border-brand-border text-brand-muted hover:text-white text-xs font-mono font-medium flex items-center justify-between transition">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">GET</span>
+                <span>/api/v1/deadlines/upcoming</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+
+            <button onclick="showApiDoc('notifications')" class="w-full text-left p-3 rounded-xl bg-brand-card hover:bg-brand-surface border border-brand-border text-brand-muted hover:text-white text-xs font-mono font-medium flex items-center justify-between transition">
+              <span class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold">GET</span>
+                <span>/api/v1/notifications</span>
+              </span>
+              <span class="material-symbols-outlined text-xs">chevron_right</span>
+            </button>
+          </div>
+
+          <!-- Right: Code and JSON Specification -->
+          <div class="lg:col-span-8 bg-[#0B1116] border border-brand-border rounded-2xl p-5 space-y-4">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-brand-border/40">
+              <div class="flex items-center gap-2">
+                <span id="api-method-badge" class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POST</span>
+                <span id="api-endpoint-path" class="font-mono font-bold text-sm text-white">/api/v1/gmail/sync</span>
+              </div>
+              <span class="text-xs font-mono text-brand-muted">Phase 12 / 13 Standard</span>
+            </div>
+
+            <p id="api-doc-desc" class="text-xs text-brand-muted">
+              Trigger ONE incremental Gmail sync using the Gmail History API. Processes only newly added messages since the last successful sync. Idempotent and safe against concurrent runs.
+            </p>
+
+            <!-- Request / cURL Box -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-[11px] font-mono text-brand-muted">
+                <span>cURL Request Example</span>
+                <span class="text-brand-accent cursor-pointer hover:underline" onclick="copyCode('api-curl')">Copy</span>
+              </div>
+              <pre id="api-curl" class="p-3 rounded-xl code-block text-xs font-mono text-slate-300 overflow-x-auto">curl -X POST "http://192.168.1.10:8000/api/v1/gmail/sync"</pre>
+            </div>
+
+            <!-- Response JSON Box -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-[11px] font-mono text-brand-muted">
+                <span>Response Schema (200 OK)</span>
+                <span class="text-brand-accent cursor-pointer hover:underline" onclick="copyCode('api-response')">Copy JSON</span>
+              </div>
+              <pre id="api-response" class="p-3 rounded-xl code-block text-xs font-mono text-emerald-300/90 overflow-x-auto max-h-60">{
+  "status": "synced",
+  "from_history_id": "184092",
+  "last_history_id": "184310",
+  "last_sync_at": "2026-08-29T06:02:00Z",
+  "new_message_ids": ["18f0a1b2c3"],
+  "processed": 1,
+  "results": [
+    {
+      "email_id": "gmail_18f0a1b2c3",
+      "created": true,
+      "priority_level": "URGENT",
+      "final_category": "INTERNSHIP"
+    }
+  ],
+  "errors": []
+}</pre>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- QUICKSTART & RUNNING INSTRUCTIONS                                         -->
+  <!-- ========================================================================= -->
+  <section id="quickstart" class="py-20 border-t border-brand-border/40 bg-gradient-to-b from-[#080D11] to-[#0B1116]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold text-brand-success tracking-widest uppercase bg-brand-success/10 px-3 py-1 rounded-full border border-brand-success/20">Production Ready</span>
+        <h2 class="font-brand text-3xl sm:text-5xl font-extrabold text-white mt-4">
+          Quickstart & Launch Guide
+        </h2>
+        <p class="text-brand-muted mt-3 text-base sm:text-lg">
+          Run the full stack in minutes across Windows, Android tablets, and mobile devices.
+        </p>
+      </div>
+
+      <!-- Steps Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        
+        <!-- STEP 1: BACKEND -->
+        <div class="glass-card p-6 rounded-3xl border-brand-border space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-brand-accent text-brand-accentDark font-bold flex items-center justify-center font-mono">1</div>
+            <div>
+              <h3 class="font-brand font-bold text-lg text-white">Start FastAPI Server</h3>
+              <p class="text-xs text-brand-muted font-mono">Python 3.11+ • Bound to 0.0.0.0:8000</p>
+            </div>
+          </div>
+          <p class="text-xs text-brand-muted">
+            Run the server listening on all network interfaces so physical tablets/phones on your local Wi-Fi can connect directly:
+          </p>
+          <pre class="p-3.5 rounded-xl code-block text-xs font-mono text-brand-accent overflow-x-auto">cd backend
+python run_server.py
+# Or: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload</pre>
+          <div class="text-[11px] font-mono text-brand-subtle flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-xs text-brand-success">check_circle</span>
+            <span>Swagger UI available at: http://localhost:8000/docs</span>
+          </div>
+        </div>
+
+        <!-- STEP 2: FLUTTER APP -->
+        <div class="glass-card p-6 rounded-3xl border-brand-border space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-brand-accent text-brand-accentDark font-bold flex items-center justify-center font-mono">2</div>
+            <div>
+              <h3 class="font-brand font-bold text-lg text-white">Launch Flutter App</h3>
+              <p class="text-xs text-brand-muted font-mono">Android Tablet / Phone / Desktop</p>
+            </div>
+          </div>
+          <p class="text-xs text-brand-muted">
+            Deploy the debug APK to your connected Android tablet or emulator:
+          </p>
+          <pre class="p-3.5 rounded-xl code-block text-xs font-mono text-brand-accent overflow-x-auto">cd frontend
+flutter run -d <your-device-id>
+# Base URL configured to: http://192.168.1.10:8000</pre>
+          <div class="text-[11px] font-mono text-brand-subtle flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-xs text-brand-success">check_circle</span>
+            <span>Live Hot Reload & Desugaring Verified</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- FOOTER                                                                    -->
+  <!-- ========================================================================= -->
+  <footer class="py-12 border-t border-brand-border/40 bg-[#06090C] text-xs text-brand-muted">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-6 h-6 rounded bg-brand-accent/20 border border-brand-accent/40 flex items-center justify-center text-brand-accent font-bold text-xs">A</div>
+        <span class="font-brand font-bold text-white tracking-wide">AGENT AMAR</span>
+        <span>• Autonomous Mail Intelligence</span>
+      </div>
+      <div class="font-mono text-[11px] text-brand-subtle">
+        FastAPI • SQLite • Flutter • Multi-Agent System • Android 16 Tested
       </div>
       <div>
-        <h1 class="font-brand font-bold text-sm tracking-wide text-white">AGENT AMAR <span class="text-brand-beige font-normal text-[11px] ml-1">· Mail Intelligence</span></h1>
-        <p class="text-brand-muted text-[11px]">Autonomous inbox agent for students & young professionals</p>
+        <a href="#hero" class="hover:text-white transition flex items-center gap-1">
+          Back to Top <span class="material-symbols-outlined text-xs">arrow_upward</span>
+        </a>
       </div>
     </div>
-    
-    <div class="flex items-center gap-2">
-      <span class="text-brand-muted text-[11px] mr-1">Quick Switcher:</span>
-      <button onclick="switchScreen('home')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-home">1. Home</button>
-      <button onclick="switchScreen('inbox')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-inbox">2. Smart Inbox</button>
-      <button onclick="switchScreen('actions')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-actions">3. Action Center</button>
-      <button onclick="switchScreen('email-detail')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-email-detail">4. Email Detail</button>
-      <button onclick="switchScreen('activity')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-activity">5. Agent Activity</button>
-    </div>
-  </header>
+  </footer>
 
-  <!-- Mobile Frame Container -->
-  <div class="mobile-viewport relative rounded-[38px] overflow-hidden flex flex-col justify-between">
-    
-    <!-- Top System Status Bar -->
-    <div class="sticky top-0 z-40 bg-[#1B3C53]/95 backdrop-blur-md px-6 pt-3 pb-2 flex items-center justify-between text-xs text-brand-muted border-b border-brand-slate/20">
-      <span class="font-mono text-[11px] text-brand-text font-medium" id="system-clock">09:41</span>
-      <div class="w-24 h-4 bg-[#112533] rounded-full mx-auto flex items-center justify-center">
-        <div class="w-2.5 h-2.5 rounded-full bg-brand-slate/60"></div>
-      </div>
-      <div class="flex items-center gap-1.5 text-[11px]">
-        <span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
-        <span class="material-symbols-outlined text-[14px]">wifi</span>
-        <span class="material-symbols-outlined text-[14px]">battery_full</span>
-      </div>
-    </div>
-
-    <!-- Main Scrollable Screen Views Area -->
-    <main class="flex-1 overflow-y-auto px-5 pt-4 pb-28">
-
-      <!-- ========================================== -->
-      <!-- SCREEN 1: HOME DASHBOARD                   -->
-      <!-- ========================================== -->
-      <section id="screen-home" class="screen-view active">
-        <!-- Branding Header & AI Pulse -->
-        <div class="flex items-start justify-between mb-4">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="font-brand font-extrabold text-2xl tracking-tight text-white leading-none">AGENT<br><span class="text-brand-beige">AMAR</span></span>
-            </div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-surface/80 border border-brand-slate/50 text-[11px] text-brand-text">
-              <span class="w-2 h-2 rounded-full bg-brand-success animate-pulse-glow shadow-glow-success"></span>
-              <span>Monitoring your inbox</span>
-            </div>
-          </div>
-          <button onclick="switchScreen('activity')" class="w-10 h-10 rounded-2xl bg-brand-surface hover:bg-brand-slate/40 border border-brand-slate/50 flex items-center justify-center text-brand-beige transition-all shadow-md relative" title="View AI Activity">
-            <span class="material-symbols-outlined text-[20px]">smart_toy</span>
-            <span class="absolute -top-1 -right-1 w-3 h-3 bg-brand-critical rounded-full border-2 border-brand-navy"></span>
-          </button>
-        </div>
-
-        <!-- Summary Banner -->
-        <div class="mb-4 flex items-center justify-between bg-brand-surface/50 border border-brand-slate/40 rounded-xl px-4 py-2.5">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-brand-beige text-[18px]">bolt</span>
-            <span class="font-brand font-bold text-xs uppercase tracking-wider text-white">YOU HAVE 3 THINGS TO HANDLE</span>
-          </div>
-          <span class="font-mono text-xs text-brand-beige font-semibold">3 Active</span>
-        </div>
-
-        <!-- Large Featured Critical Card -->
-        <div class="mb-6 relative rounded-2xl bg-gradient-to-b from-[#255070] to-[#1c3f58] border-2 border-brand-critical/60 p-5 shadow-card-elevated hover:border-brand-critical transition-all">
-          <div class="flex items-center justify-between mb-3">
-            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical border border-brand-critical/40 font-mono text-[11px] font-bold tracking-wider uppercase">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-critical animate-ping"></span>
-              CRITICAL
-            </span>
-            <span class="text-xs text-brand-muted font-sans">Placement Cell</span>
-          </div>
-
-          <h3 class="font-brand font-bold text-lg text-white mb-1.5 leading-snug">
-            Software Engineering Internship Application
-          </h3>
-          <p class="text-xs text-brand-text/90 mb-4 leading-relaxed">
-            Google Summer Internship applications close today at 5:00 PM. Requires resume & profile link.
-          </p>
-
-          <div class="flex items-center justify-between bg-brand-navy/80 rounded-xl p-3 border border-brand-slate/40 mb-4">
-            <div>
-              <p class="text-[10px] text-brand-muted uppercase font-mono tracking-wider">DEADLINE</p>
-              <p class="text-xs text-white font-medium">Today · 5:00 PM</p>
-            </div>
-            <div class="text-right">
-              <p class="text-[10px] text-brand-critical font-mono uppercase tracking-wider">TIME REMAINING</p>
-              <p class="font-mono-timer text-sm font-bold text-brand-critical countdown-display">00:22:14 LEFT</p>
-            </div>
-          </div>
-
-          <button onclick="switchScreen('email-detail')" class="w-full py-3 rounded-xl bg-brand-beige hover:bg-white text-brand-navy font-brand font-bold text-sm tracking-wide transition-all shadow-glow-beige flex items-center justify-center gap-2">
-            <span>VIEW ACTION</span>
-            <span class="material-symbols-outlined text-sm font-bold">arrow_forward</span>
-          </button>
-        </div>
-
-        <!-- Section: ACTION REQUIRED -->
-        <div class="mb-5">
-          <div class="flex items-center justify-between mb-2.5">
-            <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted">ACTION REQUIRED</h4>
-            <span class="font-mono text-[11px] text-brand-muted">2 Tasks</span>
-          </div>
-
-          <div class="space-y-2.5">
-            <!-- Card 1 -->
-            <div onclick="switchScreen('actions')" class="group cursor-pointer rounded-xl bg-brand-surface/70 hover:bg-brand-surface border border-brand-slate/40 p-3.5 transition-all">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-semibold text-brand-beige">Prof. Sharma</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">Due Tomorrow</span>
-              </div>
-              <p class="font-brand font-bold text-sm text-white mb-1">Machine Learning Assignment 3</p>
-              <p class="text-[11px] text-brand-muted">Submission deadline is tomorrow at 11:59 PM on Canvas portal.</p>
-            </div>
-
-            <!-- Card 2 -->
-            <div onclick="switchScreen('actions')" class="group cursor-pointer rounded-xl bg-brand-surface/70 hover:bg-brand-surface border border-brand-slate/40 p-3.5 transition-all">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-semibold text-brand-beige">Placement Cell</span>
-                <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">In 6 Hours</span>
-              </div>
-              <p class="font-brand font-bold text-sm text-white mb-1">Complete Placement Registration</p>
-              <p class="text-[11px] text-brand-muted">Verify semester grade transcripts before company verification lock.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section: REPLY NEEDED -->
-        <div class="mb-5">
-          <div class="flex items-center justify-between mb-2.5">
-            <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted">REPLY NEEDED</h4>
-            <span class="font-mono text-[11px] text-brand-warning">1 Pending</span>
-          </div>
-
-          <div onclick="switchScreen('inbox')" class="cursor-pointer rounded-xl bg-brand-surface/70 hover:bg-brand-surface border border-brand-slate/40 p-3.5 transition-all">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-semibold text-brand-beige">Google Recruiting Team</span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-brand-warning/20 text-brand-warning font-mono font-medium">REPLY NEEDED</span>
-            </div>
-            <p class="font-brand font-bold text-sm text-white mb-1">Follow-up: Technical Interview Availability</p>
-            <p class="text-[11px] text-brand-muted">Please reply with 3 preferred time slots for next week's rounds.</p>
-          </div>
-        </div>
-
-        <!-- Section: IMPORTANT UPDATES -->
-        <div class="mb-2">
-          <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-2.5">IMPORTANT UPDATES</h4>
-          <div onclick="switchScreen('inbox')" class="cursor-pointer rounded-xl bg-brand-surface/40 hover:bg-brand-surface/60 border border-brand-slate/30 p-3.5 transition-all">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-semibold text-brand-muted">Academic Dean</span>
-              <span class="font-mono text-[10px] text-brand-muted">14:20</span>
-            </div>
-            <p class="font-brand font-bold text-sm text-white mb-1">Mid-Semester Schedule Revision</p>
-            <p class="text-[11px] text-brand-muted">Notice regarding exam week shifts and lab evaluation timetable.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========================================== -->
-      <!-- SCREEN 2: SMART INBOX                      -->
-      <!-- ========================================== -->
-      <section id="screen-inbox" class="screen-view">
-        <!-- Header -->
-        <div class="mb-4">
-          <h2 class="font-brand font-extrabold text-2xl text-white tracking-tight">SMART INBOX</h2>
-          <div class="flex items-center gap-2 text-xs text-brand-beige mt-1">
-            <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
-            <span>AMAR organised 24 emails today.</span>
-          </div>
-        </div>
-
-        <!-- Filter Chips (Horizontal Scroll) -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
-          <button onclick="filterInbox('all')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-beige text-brand-navy transition-all" data-filter="all">All (24)</button>
-          <button onclick="filterInbox('action')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="action">Action Required (2)</button>
-          <button onclick="filterInbox('reply')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="reply">Reply Needed (1)</button>
-          <button onclick="filterInbox('important')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="important">Important (2)</button>
-          <button onclick="filterInbox('info')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="info">Information (4)</button>
-          <button onclick="filterInbox('low')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-muted border border-brand-slate/30 transition-all" data-filter="low">Low Priority (15)</button>
-        </div>
-
-        <!-- Email List (Categorized by Importance) -->
-        <div class="space-y-3" id="inbox-card-container">
-          
-          <!-- Card 1: Critical -->
-          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border-l-4 border-l-brand-critical border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="action important">
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-brand-critical/20 text-brand-critical flex items-center justify-center font-bold text-xs font-brand">PC</div>
-                <span class="text-xs font-semibold text-white">PLACEMENT CELL</span>
-              </div>
-              <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical border border-brand-critical/30">CRITICAL</span>
-            </div>
-            <h4 class="font-brand font-bold text-sm text-white mb-1">Google Summer Internship Application</h4>
-            <p class="text-xs text-brand-text/90 mb-2">Applications close today at 5:00 PM. Mandatory form for CSE/IT batches.</p>
-            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
-              <span class="text-brand-critical">Expires in 22m</span>
-              <span>16:30</span>
-            </div>
-          </div>
-
-          <!-- Card 2: Action Required -->
-          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border-l-4 border-l-brand-beige border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="action">
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-brand-navy text-brand-beige flex items-center justify-center font-bold text-xs font-brand">PS</div>
-                <span class="text-xs font-semibold text-white">PROF. SHARMA</span>
-              </div>
-              <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-beige/20 text-brand-beige border border-brand-beige/30">ACTION REQUIRED</span>
-            </div>
-            <h4 class="font-brand font-bold text-sm text-white mb-1">Machine Learning Assignment 3</h4>
-            <p class="text-xs text-brand-text/90 mb-2">Submission deadline is tomorrow at 11:59 PM. Upload Jupyter Notebook.</p>
-            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
-              <span>Due Tomorrow</span>
-              <span>14:15</span>
-            </div>
-          </div>
-
-          <!-- Card 3: Reply Needed -->
-          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border-l-4 border-l-brand-warning border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="reply">
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-brand-warning/20 text-brand-warning flex items-center justify-center font-bold text-xs font-brand">GR</div>
-                <span class="text-xs font-semibold text-white">GOOGLE RECRUITING</span>
-              </div>
-              <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-warning/20 text-brand-warning border border-brand-warning/30">REPLY NEEDED</span>
-            </div>
-            <h4 class="font-brand font-bold text-sm text-white mb-1">Interview Availability Confirmation</h4>
-            <p class="text-xs text-brand-text/90 mb-2">Awaiting your reply with 3 preferred time slots for Round 2.</p>
-            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
-              <span class="text-brand-warning">Response needed</span>
-              <span>11:20</span>
-            </div>
-          </div>
-
-          <!-- Card 4: Important Announcement -->
-          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="important info">
-            <div class="flex items-start justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-brand-slate/40 text-brand-text flex items-center justify-center font-bold text-xs font-brand">AC</div>
-                <span class="text-xs font-semibold text-white">ACM CHAPTER</span>
-              </div>
-              <span class="font-mono text-[10px] font-medium px-2 py-0.5 rounded bg-brand-slate/50 text-brand-text">IMPORTANT</span>
-            </div>
-            <h4 class="font-brand font-bold text-sm text-white mb-1">Hackathon 2026 Team Roster</h4>
-            <p class="text-xs text-brand-muted mb-2">Final team confirmation closes tonight at 11:59 PM sharp.</p>
-            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
-              <span>Tonight</span>
-              <span>09:45</span>
-            </div>
-          </div>
-
-          <!-- Card 5: Low Priority (Visually Dimmed & Compact) -->
-          <div class="email-item rounded-xl bg-brand-surface/30 border border-brand-slate/20 p-3 opacity-60 hover:opacity-100 transition-opacity" data-category="low">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-medium text-brand-muted">Campus Deals & Coursera</span>
-              <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-brand-navy text-brand-muted">LOW PRIORITY</span>
-            </div>
-            <h5 class="text-xs text-brand-text font-medium mb-0.5">Spring 50% Off Flash Sale</h5>
-            <p class="text-[11px] text-brand-muted">Promotional newsletter automatically filtered from active attention.</p>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ========================================== -->
-      <!-- SCREEN 3: ACTION CENTER                    -->
-      <!-- ========================================== -->
-      <section id="screen-actions" class="screen-view">
-        <div class="mb-4">
-          <h2 class="font-brand font-extrabold text-2xl text-white tracking-tight">ACTION CENTER</h2>
-          <p class="text-xs text-brand-beige mt-1 flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[16px]">psychology</span>
-            Things AMAR thinks you need to handle.
-          </p>
-        </div>
-
-        <!-- Section: CRITICAL NOW -->
-        <div class="mb-6">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-critical flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-brand-critical animate-ping"></span>
-              CRITICAL NOW
-            </h3>
-            <span class="font-mono text-xs text-brand-critical font-bold">22 mins remaining</span>
-          </div>
-
-          <div id="action-card-critical" class="rounded-2xl bg-gradient-to-b from-[#275373] to-[#1c3f58] border-2 border-brand-critical p-4 shadow-card-elevated">
-            <div class="flex items-center justify-between mb-2">
-              <span class="font-brand font-bold text-sm text-white">Software Engineering Internship Application</span>
-              <span id="status-critical" class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-brand-critical/30 text-brand-critical font-bold uppercase">NOT STARTED</span>
-            </div>
-            
-            <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Related:</span> Placement Cell · Google Summer Internship</p>
-            <p class="text-xs text-brand-text mb-3"><span class="text-brand-beige">Required Action:</span> Complete application form before 5:00 PM.</p>
-            
-            <div class="flex items-center justify-between bg-brand-navy/90 p-2.5 rounded-xl border border-brand-slate/40 mb-3">
-              <span class="font-mono text-xs text-brand-muted">Deadline: Today · 5:00 PM</span>
-              <span class="font-mono text-xs font-bold text-brand-critical countdown-display">00:22:14</span>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-              <button onclick="switchScreen('email-detail')" class="py-2 px-1 rounded-xl bg-brand-beige hover:bg-white text-brand-navy font-brand font-bold text-xs text-center transition-all">
-                OPEN EMAIL
-              </button>
-              <button onclick="markActionDone('action-card-critical', 'status-critical')" class="py-2 px-1 rounded-xl bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-white font-brand text-xs text-center transition-all flex items-center justify-center gap-1">
-                <span class="material-symbols-outlined text-xs text-brand-success">check</span> DONE
-              </button>
-              <button onclick="snoozeAction('action-card-critical', 'status-critical')" class="py-2 px-1 rounded-xl bg-brand-navy hover:bg-brand-slate/40 border border-brand-slate/40 text-brand-muted font-brand text-xs text-center transition-all">
-                SNOOZE
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section: TODAY -->
-        <div class="mb-5">
-          <h3 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-2.5">TODAY</h3>
-          <div class="space-y-3">
-            
-            <!-- Today Task 1 -->
-            <div id="action-card-today-1" class="rounded-2xl bg-brand-surface border border-brand-slate/40 p-4">
-              <div class="flex items-center justify-between mb-1.5">
-                <h4 class="font-brand font-bold text-sm text-white">Reply to Project Meeting Confirmation</h4>
-                <span id="status-today-1" class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-warning/20 text-brand-warning font-bold">NOT STARTED</span>
-              </div>
-              <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Required:</span> Provide 3 available slots for engineering sync.</p>
-              <p class="text-xs text-brand-muted font-mono mb-3">Due Today · 6:00 PM</p>
-              
-              <div class="grid grid-cols-3 gap-2">
-                <button onclick="switchScreen('email-detail')" class="py-1.5 rounded-lg bg-brand-slate/40 hover:bg-brand-slate text-xs font-semibold text-white">OPEN</button>
-                <button onclick="markActionDone('action-card-today-1', 'status-today-1')" class="py-1.5 rounded-lg bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-xs font-semibold text-brand-success">MARK DONE</button>
-                <button onclick="snoozeAction('action-card-today-1', 'status-today-1')" class="py-1.5 rounded-lg bg-brand-navy text-xs text-brand-muted">SNOOZE</button>
-              </div>
-            </div>
-
-            <!-- Today Task 2 -->
-            <div id="action-card-today-2" class="rounded-2xl bg-brand-surface border border-brand-slate/40 p-4">
-              <div class="flex items-center justify-between mb-1.5">
-                <h4 class="font-brand font-bold text-sm text-white">Complete Placement Registration</h4>
-                <span id="status-today-2" class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/60 text-brand-beige font-bold">VIEWED</span>
-              </div>
-              <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Required:</span> Upload verified transcripts on university portal.</p>
-              <p class="text-xs text-brand-muted font-mono mb-3">Due Today · 9:00 PM</p>
-              
-              <div class="grid grid-cols-3 gap-2">
-                <button onclick="switchScreen('email-detail')" class="py-1.5 rounded-lg bg-brand-slate/40 hover:bg-brand-slate text-xs font-semibold text-white">OPEN</button>
-                <button onclick="markActionDone('action-card-today-2', 'status-today-2')" class="py-1.5 rounded-lg bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-xs font-semibold text-brand-success">MARK DONE</button>
-                <button onclick="snoozeAction('action-card-today-2', 'status-today-2')" class="py-1.5 rounded-lg bg-brand-navy text-xs text-brand-muted">SNOOZE</button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Section: UPCOMING -->
-        <div class="mb-2">
-          <h3 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-2.5">UPCOMING</h3>
-          <div id="action-card-upcoming-1" class="rounded-2xl bg-brand-surface/70 border border-brand-slate/40 p-4">
-            <div class="flex items-center justify-between mb-1.5">
-              <h4 class="font-brand font-bold text-sm text-white">Machine Learning Assignment</h4>
-              <span id="status-upcoming-1" class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/50 text-brand-text font-medium">NOT STARTED</span>
-            </div>
-            <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Required:</span> Submit Neural Net report.</p>
-            <p class="text-xs text-brand-muted font-mono mb-3">Due Tomorrow · 11:59 PM</p>
-            
-            <div class="grid grid-cols-3 gap-2">
-              <button onclick="switchScreen('email-detail')" class="py-1.5 rounded-lg bg-brand-slate/40 hover:bg-brand-slate text-xs font-semibold text-white">OPEN</button>
-              <button onclick="markActionDone('action-card-upcoming-1', 'status-upcoming-1')" class="py-1.5 rounded-lg bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-xs font-semibold text-brand-success">MARK DONE</button>
-              <button onclick="snoozeAction('action-card-upcoming-1', 'status-upcoming-1')" class="py-1.5 rounded-lg bg-brand-navy text-xs text-brand-muted">SNOOZE</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========================================== -->
-      <!-- SCREEN 4: EMAIL INTELLIGENCE DETAIL        -->
-      <!-- ========================================== -->
-      <section id="screen-email-detail" class="screen-view">
-        <!-- Top Back Nav -->
-        <div class="flex items-center justify-between mb-4">
-          <button onclick="switchScreen('inbox')" class="inline-flex items-center gap-1 text-xs text-brand-beige font-semibold hover:text-white transition-colors">
-            <span class="material-symbols-outlined text-sm">arrow_back</span>
-            Back
-          </button>
-          <div class="flex items-center gap-2 text-brand-muted">
-            <button class="p-1.5 rounded-lg bg-brand-surface hover:text-white"><span class="material-symbols-outlined text-sm">bookmark</span></button>
-            <button class="p-1.5 rounded-lg bg-brand-surface hover:text-white"><span class="material-symbols-outlined text-sm">share</span></button>
-          </div>
-        </div>
-
-        <!-- Email Sender Header -->
-        <div class="mb-4">
-          <div class="flex items-center gap-2.5 mb-1.5">
-            <div class="w-8 h-8 rounded-xl bg-brand-critical/20 text-brand-critical font-brand font-bold text-xs flex items-center justify-center border border-brand-critical/30">
-              PC
-            </div>
-            <div>
-              <h3 class="font-bold text-sm text-white leading-tight">Placement Cell</h3>
-              <p class="text-[11px] text-brand-muted">placements@university.edu.in</p>
-            </div>
-          </div>
-          <h2 class="font-brand font-bold text-base text-white mt-2 leading-snug">
-            Google Summer Internship 2026 - Applications Open (Action Required)
-          </h2>
-        </div>
-
-        <!-- AMAR ANALYSIS CARD (Core Intelligence) -->
-        <div class="rounded-2xl bg-gradient-to-b from-[#244e6e] to-[#1a3b53] border border-brand-beige/50 p-4 shadow-card-elevated mb-5 relative overflow-hidden">
-          <div class="absolute -right-6 -top-6 w-24 h-24 bg-brand-beige/10 rounded-full blur-xl pointer-events-none"></div>
-          
-          <div class="flex items-center justify-between pb-3 border-b border-brand-slate/40 mb-3">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-brand-beige animate-pulse-glow shadow-glow-beige"></span>
-              <span class="font-brand font-extrabold text-xs tracking-wider text-brand-beige uppercase">AMAR ANALYSIS</span>
-            </div>
-            <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical border border-brand-critical/40 font-bold">
-              CRITICAL
-            </span>
-          </div>
-
-          <!-- Structured Intelligence Grid -->
-          <div class="grid grid-cols-2 gap-2.5 mb-3.5 text-xs">
-            <div class="bg-brand-navy/80 rounded-xl p-2.5 border border-brand-slate/40">
-              <span class="font-mono text-[10px] text-brand-muted uppercase block mb-0.5">CATEGORY</span>
-              <span class="font-semibold text-white">Internship Opportunity</span>
-            </div>
-            <div class="bg-brand-navy/80 rounded-xl p-2.5 border border-brand-slate/40">
-              <span class="font-mono text-[10px] text-brand-muted uppercase block mb-0.5">DEADLINE</span>
-              <span class="font-semibold text-white">Today · 5:00 PM</span>
-            </div>
-            <div class="col-span-2 bg-brand-navy/80 rounded-xl p-2.5 border border-brand-slate/40">
-              <span class="font-mono text-[10px] text-brand-muted uppercase block mb-0.5">ACTION REQUIRED</span>
-              <span class="font-semibold text-brand-beige">Complete application form & upload resume</span>
-            </div>
-            <div class="col-span-2 flex items-center justify-between bg-brand-critical/10 rounded-xl p-2.5 border border-brand-critical/30">
-              <span class="font-mono text-[11px] text-brand-critical font-semibold uppercase">TIME REMAINING</span>
-              <span class="font-mono text-sm font-bold text-brand-critical countdown-display">00:22:14</span>
-            </div>
-          </div>
-
-          <!-- Quick Summary -->
-          <div class="pt-1">
-            <p class="font-mono text-[10px] uppercase text-brand-beige font-semibold mb-1">QUICK SUMMARY</p>
-            <p class="text-xs text-brand-text leading-relaxed bg-brand-surface/40 p-2.5 rounded-xl border border-brand-slate/30">
-              “This email contains an internship application opportunity that closes today at 5:00 PM. Complete the application form before the deadline.”
-            </p>
-          </div>
-        </div>
-
-        <!-- Original Email Content -->
-        <div class="rounded-2xl bg-brand-surface/40 border border-brand-slate/30 p-4 mb-6">
-          <h4 class="font-mono text-[10px] uppercase text-brand-muted font-bold tracking-wider mb-2.5">ORIGINAL EMAIL CONTENT</h4>
-          <div class="text-xs text-brand-text/90 space-y-2.5 leading-relaxed font-sans">
-            <p>Dear Students,</p>
-            <p>Google is officially opening applications for the 2026 Summer Software Engineering Internship program. Eligible batches: 2026 & 2027 graduating students.</p>
-            <p>All interested candidates must submit their application via the portal link below along with their updated resume and GitHub profile URL before <strong>5:00 PM today sharp</strong>. Late submissions will strictly not be accepted.</p>
-            <p class="text-brand-beige font-mono text-[11px] break-all bg-brand-navy/60 p-2 rounded-lg border border-brand-slate/30">
-              Portal Link: https://careers.google.com/students/internships-2026
-            </p>
-            <p>Best regards,<br>Placement & Training Cell</p>
-          </div>
-        </div>
-
-        <!-- Bottom Action CTA Buttons -->
-        <div class="space-y-2">
-          <button onclick="showToast('Redirecting to Application Portal...')" class="w-full py-3 rounded-xl bg-brand-beige hover:bg-white text-brand-navy font-brand font-bold text-sm tracking-wide transition-all shadow-glow-beige flex items-center justify-center gap-2">
-            <span class="material-symbols-outlined text-sm">open_in_new</span>
-            OPEN APPLICATION
-          </button>
-          <div class="grid grid-cols-2 gap-2">
-            <button onclick="showToast('Marked as done! Action Center updated.'); switchScreen('actions');" class="py-2.5 rounded-xl bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-white font-brand text-xs flex items-center justify-center gap-1.5 transition-all">
-              <span class="material-symbols-outlined text-xs text-brand-success">check_circle</span>
-              MARK AS DONE
-            </button>
-            <button onclick="showToast('Snoozed for 10 minutes.'); switchScreen('home');" class="py-2.5 rounded-xl bg-brand-navy hover:bg-brand-slate/40 border border-brand-slate/40 text-brand-muted font-brand text-xs transition-all">
-              REMIND ME LATER
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========================================== -->
-      <!-- SCREEN 5: AGENT ACTIVITY                   -->
-      <!-- ========================================== -->
-      <section id="screen-activity" class="screen-view">
-        <div class="mb-4">
-          <h2 class="font-brand font-extrabold text-2xl text-white tracking-tight">AMAR ACTIVITY</h2>
-          <p class="text-xs text-brand-beige mt-1 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-brand-success animate-pulse-glow"></span>
-            Here’s what I’ve been working on.
-          </p>
-        </div>
-
-        <!-- Timeline Container -->
-        <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-brand-critical before:via-brand-beige before:to-brand-slate/40">
-          
-          <!-- Node 1: Reminder Sent -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-critical border-2 border-brand-navy shadow-glow-critical flex items-center justify-center">
-              <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-            </div>
-            <div class="rounded-xl bg-brand-surface border border-brand-critical/40 p-3 shadow-md">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-critical font-bold">16:45:01</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical font-bold uppercase">REMINDER SENT</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">Dispatched urgent reminder</p>
-              <p class="text-[11px] text-brand-muted">User hasn't viewed Placement Cell email with 22 minutes to deadline.</p>
-            </div>
-          </div>
-
-          <!-- Node 2: User Inactivity Audit -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-beige border-2 border-brand-navy shadow-glow-beige flex items-center justify-center">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-navy"></span>
-            </div>
-            <div class="rounded-xl bg-brand-surface border border-brand-slate/40 p-3">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-beige font-semibold">16:45:00</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/50 text-brand-text">INACTIVITY CHECK</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">USER HAS NOT VIEWED EMAIL</p>
-              <p class="text-[11px] text-brand-muted">15-minute audit window elapsed without user opening critical message.</p>
-            </div>
-          </div>
-
-          <!-- Node 3: Priority Assigned -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
-            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-muted">16:30:18</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-critical/20 text-brand-critical font-semibold">CRITICAL</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">PRIORITY ASSIGNED: CRITICAL</p>
-              <p class="text-[11px] text-brand-muted">Elevated priority threshold due to impending 5:00 PM cutoff.</p>
-            </div>
-          </div>
-
-          <!-- Node 4: Deadline Found -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
-            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-muted">16:30:17</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">EXTRACTION</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">DEADLINE FOUND</p>
-              <p class="text-[11px] text-brand-muted">Extracted time token: Today · 5:00 PM IST (Confidence: 99.8%)</p>
-            </div>
-          </div>
-
-          <!-- Node 5: Action Detected -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
-            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-muted">16:30:16</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">PARSER</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">ACTION DETECTED</p>
-              <p class="text-[11px] text-brand-muted">Mandatory Google Form submission & resume upload detected.</p>
-            </div>
-          </div>
-
-          <!-- Node 6: Analysing Content -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
-            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-muted">16:30:14</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">NLP</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">ANALYSING CONTENT</p>
-              <p class="text-[11px] text-brand-muted">Parsing email context, eligibility criteria, and links...</p>
-            </div>
-          </div>
-
-          <!-- Node 7: New Email Detected -->
-          <div class="relative">
-            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
-            <div class="rounded-xl bg-brand-surface/60 border border-brand-slate/30 p-3">
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-mono text-[11px] text-brand-muted">16:30:12</span>
-                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">INGESTION</span>
-              </div>
-              <p class="font-brand font-bold text-xs text-white">NEW EMAIL DETECTED</p>
-              <p class="text-[11px] text-brand-muted">Placement Cell &lt;placements@university.edu.in&gt;</p>
-            </div>
-          </div>
-
-          <!-- Earlier Autonomous Activity Group -->
-          <div class="pt-2">
-            <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-3">EARLIER TODAY</h4>
-            
-            <div class="space-y-2.5">
-              <div class="rounded-xl bg-brand-surface/40 border border-brand-slate/20 p-2.5 text-xs">
-                <div class="flex items-center justify-between font-mono text-[10px] text-brand-muted mb-0.5">
-                  <span>14:15:20</span>
-                  <span class="text-brand-beige font-semibold">ASSIGNMENT SYNC</span>
-                </div>
-                <p class="font-bold text-white text-[11px]">Prof. Sharma ML Assignment 3 logged to Action Center</p>
-              </div>
-
-              <div class="rounded-xl bg-brand-surface/40 border border-brand-slate/20 p-2.5 text-xs">
-                <div class="flex items-center justify-between font-mono text-[10px] text-brand-muted mb-0.5">
-                  <span>11:20:05</span>
-                  <span class="text-brand-warning font-semibold">REPLY REQUIRED</span>
-                </div>
-                <p class="font-bold text-white text-[11px]">Google Recruiting interview availability flagged</p>
-              </div>
-
-              <div class="rounded-xl bg-brand-surface/40 border border-brand-slate/20 p-2.5 text-xs">
-                <div class="flex items-center justify-between font-mono text-[10px] text-brand-muted mb-0.5">
-                  <span>09:00:12</span>
-                  <span class="text-brand-muted">NOISE SUPPRESSION</span>
-                </div>
-                <p class="font-bold text-white text-[11px]">Auto-filtered 18 promotional newsletters into Low Priority</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-    </main>
-
-    <!-- Bottom Navigation Bar (Persistent Mobile Tab Bar) -->
-    <nav class="absolute bottom-0 left-0 right-0 z-50 h-20 px-4 bg-[#142d3f]/95 backdrop-blur-xl border-t border-brand-slate/40 flex items-center justify-around">
-      
-      <!-- Tab 1: Home -->
-      <button onclick="switchScreen('home')" class="nav-tab flex flex-col items-center justify-center transition-all group active" data-tab="home">
-        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center bg-brand-beige text-brand-navy mb-0.5 transition-all">
-          <span class="material-symbols-outlined text-[18px]">home</span>
-        </div>
-        <span class="tab-label font-sans text-[10px] font-bold text-brand-beige">Home</span>
-      </button>
-
-      <!-- Tab 2: Inbox -->
-      <button onclick="switchScreen('inbox')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="inbox">
-        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all">
-          <span class="material-symbols-outlined text-[18px]">mail</span>
-        </div>
-        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Inbox</span>
-      </button>
-
-      <!-- Tab 3: Actions -->
-      <button onclick="switchScreen('actions')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="actions">
-        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all relative">
-          <span class="material-symbols-outlined text-[18px]">task_alt</span>
-          <span class="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-brand-critical"></span>
-        </div>
-        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Actions</span>
-      </button>
-
-      <!-- Tab 4: Activity -->
-      <button onclick="switchScreen('activity')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="activity">
-        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all">
-          <span class="material-symbols-outlined text-[18px]">history_edu</span>
-        </div>
-        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Activity</span>
-      </button>
-
-      <!-- Tab 5: Profile/Settings -->
-      <button onclick="showToast('Profile & AI Settings: Autonomous agent engine running active.')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="profile">
-        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all">
-          <span class="material-symbols-outlined text-[18px]">person</span>
-        </div>
-        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Profile</span>
-      </button>
-
-    </nav>
-
-    <!-- Interactive Toast Notification Alert -->
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-brand-navy border border-brand-beige text-brand-text text-xs font-semibold shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-3 flex items-center gap-2">
-      <span class="material-symbols-outlined text-brand-beige text-sm">info</span>
-      <span id="toast-msg">Action updated!</span>
-    </div>
-
-  </div>
-
-  <!-- Interactive JavaScript Engine -->
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT LOGIC & INTERACTIVITY                                          -->
+  <!-- ========================================================================= -->
   <script>
-    // System Clock Simulation
-    function updateClock() {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const clockEl = document.getElementById('system-clock');
-      if (clockEl) clockEl.textContent = `${hours}:${minutes}`;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // Live Monospace Countdown Clocks (Counting down 22 minutes)
-    let totalSeconds = 22 * 60 + 14;
-    function updateCountdowns() {
-      if (totalSeconds > 0) totalSeconds--;
-      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const seconds = String(totalSeconds % 60).padStart(2, '0');
-      const display = `${hours}:${minutes}:${seconds} LEFT`;
-      
-      document.querySelectorAll('.countdown-display').forEach(el => {
-        el.textContent = `${hours}:${minutes}:${seconds}`;
-      });
-    }
-    setInterval(updateCountdowns, 1000);
-
-    // Screen Switching Logic
-    function switchScreen(screenName) {
-      // Deactivate all screen views
-      document.querySelectorAll('.screen-view').forEach(view => {
-        view.classList.remove('active');
-      });
-
-      // Activate targeted screen view
-      const targetView = document.getElementById('screen-' + screenName);
-      if (targetView) {
-        targetView.classList.add('active');
+    // Simulator Presets
+    const presets = {
+      placement: {
+        sender: "Placement Officer <placement@college.edu>",
+        subject: "URGENT: TCS Digital Registration Form - Closes Today 5:00 PM",
+        body: "Dear Students, TCS Digital campus drive applications are now open for final year students. Please submit your updated resume and complete the registration form at https://tcs.careers/drive2026 before 5:00 PM today strictly. Late submissions will not be considered.",
+        category: "PLACEMENT",
+        confidence: "96%",
+        priority: "CRITICAL (92/100)",
+        band: "Proximity: WITHIN_1H",
+        actionType: "FORM_SUBMISSION",
+        actionDesc: "Submit updated resume & complete registration",
+        deadline: "Today, 5:00 PM UTC",
+        isAlarm: true
+      },
+      internship: {
+        sender: "University Career Hub <careers@google.com>",
+        subject: "Google Summer Engineering Internship 2026",
+        body: "Applications for the Google Summer Internship 2026 are closing in 4 hours. Upload your transcript and complete the online assessment questionnaire at https://careers.google.com/students before 9:00 PM UTC.",
+        category: "INTERNSHIP",
+        confidence: "94%",
+        priority: "URGENT (82/100)",
+        band: "Proximity: WITHIN_24H",
+        actionType: "DOCUMENT_UPLOAD",
+        actionDesc: "Upload transcript & complete assessment questionnaire",
+        deadline: "Tonight, 9:00 PM UTC",
+        isAlarm: false
+      },
+      assignment: {
+        sender: "Prof. Raman <raman.cs@university.edu>",
+        subject: "AI Lab 4: PyTorch Neural Network Submission",
+        body: "Reminder: The submission portal for Lab 4 Neural Network assignment will close tomorrow at 23:59. Submit your Jupyter notebook with training logs.",
+        category: "ASSIGNMENT",
+        confidence: "98%",
+        priority: "HIGH (68/100)",
+        band: "Proximity: WITHIN_72H",
+        actionType: "COMPLETE_ASSIGNMENT",
+        actionDesc: "Submit PyTorch Jupyter notebook with training logs",
+        deadline: "Tomorrow, 23:59 UTC",
+        isAlarm: false
+      },
+      promo: {
+        sender: "Domino's Pizza <deals@dominos.com>",
+        subject: "50% Off on your next 3 orders this weekend!",
+        body: "Craving hot cheesy pizza? Use code WEEKEND50 at checkout to claim 50% discount on all medium and large pizzas.",
+        category: "PROMOTIONAL",
+        confidence: "99%",
+        priority: "LOW (12/100)",
+        band: "Proximity: NONE",
+        actionType: "NONE",
+        actionDesc: "No blocking action required",
+        deadline: "None",
+        isAlarm: false
       }
+    };
 
-      // Scroll to top
-      const scrollContainer = document.querySelector('main');
-      if (scrollContainer) scrollContainer.scrollTop = 0;
-
-      // Update Bottom Navigation Tabs
-      document.querySelectorAll('.nav-tab').forEach(tab => {
-        const tabIndicator = tab.querySelector('.tab-indicator');
-        const tabLabel = tab.querySelector('.tab-label');
-        
-        if (tab.dataset.tab === screenName || (screenName === 'email-detail' && tab.dataset.tab === 'inbox')) {
-          tabIndicator.className = 'tab-indicator w-10 h-7 rounded-full flex items-center justify-center bg-brand-beige text-brand-navy mb-0.5 transition-all';
-          tabLabel.className = 'tab-label font-sans text-[10px] font-bold text-brand-beige';
-        } else {
-          tabIndicator.className = 'tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all';
-          tabLabel.className = 'tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text';
-        }
-      });
-
-      // Update Desktop Quick Switcher Pills
-      document.querySelectorAll('[id^="pill-"]').forEach(pill => {
-        pill.classList.remove('bg-brand-beige', 'text-brand-navy', 'font-bold');
-        pill.classList.add('bg-brand-navy', 'text-brand-text');
-      });
-      const activePill = document.getElementById('pill-' + screenName);
-      if (activePill) {
-        activePill.classList.remove('bg-brand-navy', 'text-brand-text');
-        activePill.classList.add('bg-brand-beige', 'text-brand-navy', 'font-bold');
-      }
+    function loadPreset(key) {
+      const p = presets[key];
+      if (!p) return;
+      document.getElementById('sim-sender').value = p.sender;
+      document.getElementById('sim-subject').value = p.subject;
+      document.getElementById('sim-body').value = p.body;
+      runPipelineSimulation(p);
     }
 
-    // Smart Inbox Filter Chips Logic
-    function filterInbox(category) {
-      document.querySelectorAll('.inbox-filter-btn').forEach(btn => {
-        if (btn.dataset.filter === category) {
-          btn.className = 'inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-beige text-brand-navy transition-all';
-        } else {
-          btn.className = 'inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all';
-        }
-      });
+    function runPipelineSimulation(customPreset) {
+      const btn = document.getElementById('sim-run-btn');
+      btn.innerHTML = '<span class="material-symbols-outlined text-lg animate-spin">sync</span> Running Multi-Agent Agents...';
+      btn.disabled = true;
 
-      const cards = document.querySelectorAll('.email-item');
-      cards.forEach(card => {
-        if (category === 'all') {
-          card.style.display = 'block';
+      setTimeout(() => {
+        btn.innerHTML = '<span class="material-symbols-outlined text-lg">play_arrow</span> Execute Multi-Agent Pipeline';
+        btn.disabled = false;
+
+        const subject = document.getElementById('sim-subject').value.toLowerCase();
+        let p = customPreset;
+        if (!p) {
+          if (subject.includes('tcs') || subject.includes('placement')) p = presets.placement;
+          else if (subject.includes('google') || subject.includes('internship')) p = presets.internship;
+          else if (subject.includes('assignment') || subject.includes('lab')) p = presets.assignment;
+          else p = presets.promo;
+        }
+
+        document.getElementById('res-category').innerText = p.category;
+        document.getElementById('res-confidence').innerText = 'Confidence: ' + p.confidence;
+        document.getElementById('res-priority').innerText = p.priority;
+        document.getElementById('res-band').innerText = p.band;
+        document.getElementById('res-action-type').innerText = p.actionType;
+        document.getElementById('res-action-desc').innerText = p.actionDesc;
+        document.getElementById('res-deadline').innerText = p.deadline;
+
+        const alertBox = document.getElementById('res-alert-box');
+        if (p.isAlarm) {
+          alertBox.className = "p-3.5 rounded-xl bg-red-950/40 border border-red-500/50 flex items-center justify-between";
+          alertBox.innerHTML = `
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-red-400 text-xl animate-bounce">alarm</span>
+              <div>
+                <div class="text-xs font-brand font-bold text-red-200">ESCALATION: ALARM TRIGGERED</div>
+                <div class="text-[10px] text-red-400 font-mono">requires_alarm: true • Device sound + AlarmDialog</div>
+              </div>
+            </div>
+            <span class="px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-red-500 text-white">ACTIVE</span>
+          `;
         } else {
-          const cardCategories = card.dataset.category || '';
-          if (cardCategories.includes(category)) {
-            card.style.display = 'block';
+          alertBox.className = "p-3.5 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between";
+          alertBox.innerHTML = `
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-brand-accent text-xl">notifications</span>
+              <div>
+                <div class="text-xs font-brand font-bold text-slate-200">STANDARD NOTIFICATION</div>
+                <div class="text-[10px] text-brand-muted font-mono">Severity: ${p.priority.split(' ')[0]} • General Channel</div>
+              </div>
+            </div>
+            <span class="px-2 py-1 rounded-md text-[10px] font-mono font-bold bg-brand-surface text-brand-muted">NORMAL</span>
+          `;
+        }
+      }, 450);
+    }
+
+    // Mobile View Tab Switcher
+    function switchMobileScreen(screen) {
+      const screens = ['home', 'attention', 'deadlines', 'reminders', 'alarm'];
+      screens.forEach(s => {
+        const el = document.getElementById('screen-' + s);
+        const tab = document.getElementById('tab-' + s);
+        if (el) el.classList.add('hidden');
+        if (tab) {
+          tab.classList.remove('bg-brand-accent', 'text-brand-accentDark');
+          if (s === 'alarm') {
+            tab.classList.add('bg-red-950/60', 'text-red-300');
           } else {
-            card.style.display = 'none';
+            tab.classList.add('bg-brand-surface', 'text-brand-muted');
           }
         }
       });
+
+      const activeEl = document.getElementById('screen-' + screen);
+      const activeTab = document.getElementById('tab-' + screen);
+      const titleEl = document.getElementById('phone-screen-title');
+
+      if (activeEl) activeEl.classList.remove('hidden');
+      if (activeTab) {
+        activeTab.classList.remove('bg-brand-surface', 'text-brand-muted', 'bg-red-950/60');
+        activeTab.classList.add('bg-brand-accent', 'text-brand-accentDark');
+      }
+
+      if (titleEl) {
+        titleEl.innerText = screen.toUpperCase().replace('ALARM', 'CRITICAL ALARM');
+      }
     }
 
-    // Mark Action Done Interaction
-    function markActionDone(cardId, statusId) {
-      const statusEl = document.getElementById(statusId);
-      const cardEl = document.getElementById(cardId);
-      if (statusEl) {
-        statusEl.textContent = 'COMPLETED';
-        statusEl.className = 'font-mono text-[10px] px-2 py-0.5 rounded-full bg-brand-success/20 text-brand-success font-bold';
+    // API Docs Data & Switcher
+    const apiDocs = {
+      'sync': {
+        method: 'POST',
+        path: '/api/v1/gmail/sync',
+        badgeClass: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+        desc: 'Request ONE incremental Gmail sync using the Gmail History API. The backend scheduler owns continuous monitoring — this endpoint allows manual or on-resume refresh.',
+        curl: 'curl -X POST "http://192.168.1.10:8000/api/v1/gmail/sync"',
+        response: '{\n  "status": "synced",\n  "from_history_id": "184092",\n  "last_history_id": "184310",\n  "last_sync_at": "2026-08-29T06:02:00Z",\n  "new_message_ids": ["18f0a1b2c3"],\n  "processed": 1,\n  "results": [\n    {\n      "email_id": "gmail_18f0a1b2c3",\n      "created": true,\n      "priority_level": "URGENT",\n      "final_category": "INTERNSHIP"\n    }\n  ],\n  "errors": []\n}'
+      },
+      'sync-status': {
+        method: 'GET',
+        path: '/api/v1/gmail/sync/status',
+        badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        desc: 'Returns the persistent Gmail monitoring baseline and synchronization status without making an upstream Gmail API call.',
+        curl: 'curl -X GET "http://192.168.1.10:8000/api/v1/gmail/sync/status"',
+        response: '{\n  "monitoring": true,\n  "account_email": "student@college.edu",\n  "monitoring_started_at": "2026-08-29T06:00:00Z",\n  "last_sync_at": "2026-08-29T06:02:00Z",\n  "last_history_id": "184310"\n}'
+      },
+      'emails': {
+        method: 'GET',
+        path: '/api/v1/emails',
+        badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        desc: 'Retrieve the smart inbox list. Each row includes category, priority score, snippet, next deadline, and action required flags.',
+        curl: 'curl -X GET "http://192.168.1.10:8000/api/v1/emails?limit=20"',
+        response: '[\n  {\n    "email_id": "gmail_18f0a1b2c3",\n    "sender_name": "Placement Cell",\n    "sender_email": "placement@college.edu",\n    "subject": "Summer Internship 2026 - applications open",\n    "snippet": "Please submit the application form by 5 September 2026",\n    "final_category": "INTERNSHIP",\n    "priority_level": "URGENT",\n    "priority_score": 75,\n    "proximity_bucket": "LATER",\n    "action_required": true,\n    "is_unread": true,\n    "is_viewed": false,\n    "is_completed": false\n  }\n]'
+      },
+      'email-detail': {
+        method: 'GET',
+        path: '/api/v1/emails/{email_id}',
+        badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        desc: 'Complete intelligence details for a single email: extracted actions with links, concrete deadlines, notification history, and full multi-agent execution trace.',
+        curl: 'curl -X GET "http://192.168.1.10:8000/api/v1/emails/gmail_18f0a1b2c3"',
+        response: '{\n  "email_id": "gmail_18f0a1b2c3",\n  "reasoning_summary": "INTERNSHIP -> URGENT (score 75); route: store=True notify=True monitor=True",\n  "actions": [\n    {\n      "action_ref": "act_001",\n      "action_type": "DOCUMENT_UPLOAD",\n      "description": "Upload resume",\n      "blocking": true,\n      "target_link": "https://forms.gle/abc",\n      "status": "PENDING"\n    }\n  ],\n  "deadlines": [\n    {\n      "deadline_ref": "dl_001",\n      "deadline_datetime": "2026-09-05T12:30:00Z",\n      "is_ambiguous": false\n    }\n  ]\n}'
+      },
+      'pending-actions': {
+        method: 'GET',
+        path: '/api/v1/actions/pending',
+        badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        desc: 'Every PENDING action across all emails, ranked by priority and urgency for the Needs Attention screen.',
+        curl: 'curl -X GET "http://192.168.1.10:8000/api/v1/actions/pending"',
+        response: '[\n  {\n    "action_ref": "act_001",\n    "action_type": "FORM_SUBMISSION",\n    "description": "Fill and submit the form",\n    "blocking": true,\n    "target_link": "https://forms.gle/abc",\n    "email_id": "gmail_18f0a1b2c3",\n    "priority_level": "URGENT"\n  }\n]'
+      },
+      'deadlines': {
+        method: 'GET',
+        path: '/api/v1/deadlines/upcoming',
+        badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        desc: 'Upcoming open deadlines across uncompleted emails, sorted soonest first.',
+        curl: 'curl -X GET "http://192.168.1.10:8000/api/v1/deadlines/upcoming"',
+        response: '[\n  {\n    "deadline_ref": "dl_001",\n    "deadline_datetime": "2026-09-05T12:30:00Z",\n    "source_text": "5 September 2026",\n    "email_id": "gmail_18f0a1b2c3",\n    "subject": "Summer Internship 2026",\n    "priority_level": "URGENT"\n  }\n]'
+      },
+      'notifications': {
+        method: 'GET',
+        path: '/api/v1/notifications',
+        badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        desc: 'Query created notification events. Filter by requires_alarm=true to identify critical alarm alerts.',
+        curl: 'curl -X GET "http://192.168.1.10:8000/api/v1/notifications?requires_alarm=true"',
+        response: '[\n  {\n    "id": 12,\n    "email_id": "gmail_18f0a1b2c3",\n    "notification_type": "deadline_escalation",\n    "severity": "ALARM",\n    "requires_alarm": true,\n    "status": "PENDING",\n    "detail": "CRITICAL deadline in 4m; unviewed"\n  }\n]'
       }
-      if (cardEl) {
-        cardEl.style.opacity = '0.75';
-        cardEl.style.borderColor = '#38D39F';
-      }
-      showToast('Task marked as completed! AI knowledge base updated.');
+    };
+
+    function showApiDoc(key) {
+      const doc = apiDocs[key];
+      if (!doc) return;
+      document.getElementById('api-method-badge').innerText = doc.method;
+      document.getElementById('api-method-badge').className = `px-2 py-0.5 rounded text-xs font-mono font-bold ${doc.badgeClass}`;
+      document.getElementById('api-endpoint-path').innerText = doc.path;
+      document.getElementById('api-doc-desc').innerText = doc.desc;
+      document.getElementById('api-curl').innerText = doc.curl;
+      document.getElementById('api-response').innerText = doc.response;
     }
 
-    // Snooze Action Interaction
-    function snoozeAction(cardId, statusId) {
-      const statusEl = document.getElementById(statusId);
-      const cardEl = document.getElementById(cardId);
-      if (statusEl) {
-        statusEl.textContent = 'SNOOZED';
-        statusEl.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate text-brand-muted font-bold';
-      }
-      if (cardEl) {
-        cardEl.style.opacity = '0.6';
-      }
-      showToast('Snoozed: AMAR will remind you in 15 minutes.');
-    }
-
-    // Toast Notifications
-    let toastTimeout;
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toast-msg');
-      if (toast && toastMsg) {
-        toastMsg.textContent = message;
-        toast.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
-        toast.classList.add('opacity-100', 'translate-y-0');
-        
-        clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => {
-          toast.classList.remove('opacity-100', 'translate-y-0');
-          toast.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
-        }, 2800);
-      }
+    function copyCode(id) {
+      const text = document.getElementById(id).innerText;
+      navigator.clipboard.writeText(text);
+      alert('Copied to clipboard!');
     }
   </script>
 </body>
