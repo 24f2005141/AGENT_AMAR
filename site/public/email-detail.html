@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Email Intelligence Detail - AGENT AMAR</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Geist+Mono:wght@500&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary": "#a4cbee",
+                      "surface-bright": "#353a3d",
+                      "on-surface": "#dfe3e7",
+                      "on-primary": "#10334a",
+                      "on-error": "#690005",
+                      "on-tertiary-fixed": "#231a13",
+                      "on-error-container": "#ffdad6",
+                      "surface-tint": "#aacae7",
+                      "outline-variant": "#42474d",
+                      "on-secondary-fixed": "#001e31",
+                      "primary": "#aacae7",
+                      "on-tertiary-fixed-variant": "#50443c",
+                      "on-primary-fixed-variant": "#2a4a61",
+                      "inverse-primary": "#43627a",
+                      "tertiary-container": "#42372f",
+                      "secondary-fixed-dim": "#a4cbee",
+                      "tertiary-fixed": "#f1dfd4",
+                      "on-secondary-fixed-variant": "#214a68",
+                      "error-container": "#93000a",
+                      "on-secondary-container": "#96bde0",
+                      "tertiary-fixed-dim": "#d4c3b8",
+                      "on-background": "#dfe3e7",
+                      "tertiary": "#d4c3b8",
+                      "surface-container-highest": "#313539",
+                      "surface-container-high": "#262b2e",
+                      "on-primary-container": "#87a6c2",
+                      "surface-container-lowest": "#0a0f12",
+                      "surface-container": "#1b2023",
+                      "on-secondary": "#003350",
+                      "surface-dim": "#0f1417",
+                      "on-surface-variant": "#c2c7cd",
+                      "secondary-fixed": "#cce5ff",
+                      "primary-fixed": "#cbe6ff",
+                      "on-primary-fixed": "#001e30",
+                      "surface-container-low": "#171c1f",
+                      "secondary-container": "#244c6a",
+                      "primary-fixed-dim": "#aacae7",
+                      "surface": "#0f1417",
+                      "inverse-on-surface": "#2c3134",
+                      "surface-variant": "#313539",
+                      "primary-container": "#1b3c53",
+                      "error": "#ffb4ab",
+                      "outline": "#8c9197",
+                      "on-tertiary-container": "#b0a095",
+                      "inverse-surface": "#dfe3e7",
+                      "background": "#0f1417",
+                      "on-tertiary": "#392e27"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "container-padding": "24px",
+                      "stack-sm": "8px",
+                      "stack-lg": "32px",
+                      "unit": "4px",
+                      "stack-md": "16px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "label-caps": [
+                              "Geist"
+                      ],
+                      "body-sm": [
+                              "Geist"
+                      ],
+                      "mono-timer": [
+                              "Geist Mono"
+                      ],
+                      "headline-xl": [
+                              "Bricolage Grotesque"
+                      ],
+                      "body-md": [
+                              "Geist"
+                      ],
+                      "body-lg": [
+                              "Geist"
+                      ],
+                      "headline-md": [
+                              "Bricolage Grotesque"
+                      ],
+                      "headline-lg": [
+                              "Bricolage Grotesque"
+                      ]
+              },
+              "fontSize": {
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "mono-timer": [
+                              "14px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-xl": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .ai-pulse {
+            animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 8px 2px rgba(210, 193, 182, 0.4);
+            }
+            50% {
+                opacity: .5;
+                box-shadow: 0 0 2px 0 rgba(210, 193, 182, 0.1);
+            }
+        }
+        .ai-glow-card {
+            box-shadow: 0 0 20px 0 rgba(210, 193, 182, 0.05);
+        }
+        .glass-panel {
+            background: rgba(35, 76, 106, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen flex flex-col font-body-md overflow-x-hidden">
+<!-- Top Navigation (Transactional, no shell) -->
+<header class="flex items-center justify-between px-gutter h-16 w-full fixed top-0 z-50 bg-background/90 backdrop-blur-sm border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<button aria-label="Go back" class="p-2 hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center text-on-surface-variant active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-primary">Email Intelligence</h1>
+</div>
+<div class="flex items-center gap-2">
+<button aria-label="Share" class="p-2 hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center text-on-surface-variant active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+<button aria-label="Archive" class="p-2 hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center text-on-surface-variant active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="archive">archive</span>
+</button>
+</div>
+</header>
+<main class="flex-grow pt-[80px] pb-[120px] px-gutter md:px-container-padding max-w-4xl mx-auto w-full flex flex-col gap-stack-lg">
+<!-- Email Header -->
+<section class="flex flex-col gap-stack-sm pt-stack-sm">
+<h2 class="font-headline-lg text-headline-lg text-on-background">Google Summer Internship 2026 - Applications Open</h2>
+<div class="flex items-center justify-between text-on-surface-variant mt-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-label-caps text-label-caps">
+                        P
+                    </div>
+<span class="font-body-md text-body-md">Placement Cell &lt;placements@university.edu.in&gt;</span>
+</div>
+</div>
+<div class="font-body-sm text-body-sm text-outline mt-1 pl-10">Today · 4:30 PM</div>
+</section>
+<!-- AMAR ANALYSIS Card -->
+<section class="bg-primary-container border border-[#456882] rounded-xl p-stack-md flex flex-col gap-stack-md ai-glow-card relative overflow-hidden">
+<!-- Decorative AI Background Element -->
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-tertiary rounded-full mix-blend-screen filter blur-[80px] opacity-10"></div>
+<div class="flex items-center justify-between border-b border-[#456882] pb-stack-sm relative z-10">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary ai-pulse"></div>
+<h3 class="font-label-caps text-label-caps text-tertiary tracking-wider">AMAR ANALYSIS</h3>
+</div>
+<div class="bg-error text-on-error font-label-caps text-label-caps px-2 py-1 rounded-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="warning">warning</span>
+                    CRITICAL
+                </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md relative z-10">
+<div class="flex flex-col gap-1 border-l-2 border-[#456882] pl-3">
+<span class="font-label-caps text-label-caps text-on-surface-variant">CATEGORY</span>
+<span class="font-body-md text-body-md text-on-background">Internship Opportunity</span>
+</div>
+<div class="flex flex-col gap-1 border-l-2 border-[#456882] pl-3">
+<span class="font-label-caps text-label-caps text-on-surface-variant">ACTION REQUIRED</span>
+<span class="font-body-md text-body-md text-on-background">Complete application form</span>
+</div>
+<div class="flex flex-col gap-1 border-l-2 border-error pl-3">
+<span class="font-label-caps text-label-caps text-on-surface-variant">DEADLINE</span>
+<span class="font-body-md text-body-md text-on-background">Today · 5:00 PM</span>
+</div>
+<div class="flex flex-col gap-1 border-l-2 border-error pl-3">
+<span class="font-label-caps text-label-caps text-on-surface-variant">TIME REMAINING</span>
+<span class="font-mono-timer text-mono-timer text-error" id="countdown-timer">00:22:14</span>
+</div>
+</div>
+<div class="bg-[#1B3C53] border border-[#456882] rounded-lg p-3 mt-2 relative z-10">
+<p class="font-body-sm text-body-sm text-on-surface">
+<span class="font-bold text-tertiary mr-1">Quick Summary:</span>This email contains an internship application opportunity that closes today at 5:00 PM. Complete the application form before the deadline.
+                </p>
+</div>
+</section>
+<!-- Original Email Section -->
+<section class="bg-surface-container-low border border-outline-variant rounded-lg p-stack-md flex flex-col gap-stack-sm">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant border-b border-outline-variant pb-2 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
+                ORIGINAL MESSAGE
+            </h4>
+<div class="font-body-md text-body-md text-on-surface whitespace-pre-wrap leading-relaxed">
+Dear Students, 
+
+Google Summer Internship applications for 2026 are now open. The deadline for submission is today at 5:00 PM IST. Please ensure all documents are uploaded correctly. 
+
+Best, 
+Placement Cell.
+            </div>
+</section>
+</main>
+<!-- Bottom Actions (Sticky) -->
+<div class="fixed bottom-0 w-full z-40 bg-surface-container-high border-t border-outline-variant p-gutter flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+<button class="w-full bg-tertiary text-on-primary-fixed-variant font-body-md text-body-md font-bold py-3 rounded flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="open_in_new">open_in_new</span>
+            OPEN APPLICATION
+        </button>
+<div class="flex gap-3">
+<button class="flex-1 border border-[#456882] bg-transparent text-on-background font-body-sm text-body-sm py-2 rounded flex items-center justify-center gap-2 hover:bg-surface-variant transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+                MARK AS DONE
+            </button>
+<button class="flex-1 border border-[#456882] bg-transparent text-on-background font-body-sm text-body-sm py-2 rounded flex items-center justify-center gap-2 hover:bg-surface-variant transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+                REMIND ME LATER
+            </button>
+</div>
+</div>
+<script>
+        // Simple countdown visual effect (not accurate, just for UI demonstration)
+        const timerElement = document.getElementById('countdown-timer');
+        let seconds = 22 * 60 + 14; // Initial time in seconds
+
+        setInterval(() => {
+            if (seconds > 0) {
+                seconds--;
+                const h = Math.floor(seconds / 3600);
+                const m = Math.floor((seconds % 3600) / 60);
+                const s = seconds % 60;
+                timerElement.textContent = 
+                    String(h).padStart(2, '0') + ':' + 
+                    String(m).padStart(2, '0') + ':' + 
+                    String(s).padStart(2, '0');
+            }
+        }, 1000);
+    </script>
+</body></html>

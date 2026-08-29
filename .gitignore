@@ -1,0 +1,87 @@
+# ── AGENT AMAR — repo-root .gitignore ─────────────────────────────────
+# Backstops backend/.gitignore and frontend/.gitignore; keep language- or
+# tool-specific rules in those where possible.
+
+# ── Secrets & credentials — never commit ─────────────────────────────
+.env
+.env.*
+!.env.example
+*.env
+.tokens/
+*.token.json
+secrets/
+client_secret*.json
+*credentials*.json
+service-account*.json
+
+# ── Local databases ─────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ── Python (backend/) ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# ── Dart / Flutter (frontend/) ──────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+**/doc/api/
+*.lock.orig
+pubspec_overrides.yaml
+
+# ── Node / web build (site/, tooling) ───────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Editors & IDEs ──────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+.history/
+
+# ── OS cruft ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Obsidian vault — keep shared config, drop per-user UI state ──────
+AGENT-AMAR/.obsidian/workspace.json
+AGENT-AMAR/.obsidian/workspace-mobile.json
+AGENT-AMAR/.obsidian/cache
+.trash/
+
+# ── Logs & scratch ──────────────────────────────────────────────────
+*.log
+logs/
+tmp/
+scratch/

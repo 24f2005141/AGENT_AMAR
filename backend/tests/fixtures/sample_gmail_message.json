@@ -1,0 +1,147 @@
+{
+  "id": "18f0a1b2c3d4e5f6",
+  "threadId": "18f0a1b2c3d4e5f6",
+  "labelIds": [
+    "INBOX",
+    "UNREAD",
+    "IMPORTANT",
+    "CATEGORY_UPDATES"
+  ],
+  "snippet": "Dear Students, The Placement Cell is pleased to announce a Software Engineering Internship opportunity with Nimbus Labs ...",
+  "historyId": "99887766",
+  "internalDate": "1787888662000",
+  "sizeEstimate": 20456,
+  "payload": {
+    "partId": "",
+    "mimeType": "multipart/mixed",
+    "filename": "",
+    "headers": [
+      {
+        "name": "Delivered-To",
+        "value": "student.2026@college.edu"
+      },
+      {
+        "name": "Received",
+        "value": "by 2002:a05:6000:1234 with SMTP id x; Thu, 28 Aug 2026 03:44:25 -0000 (UTC)"
+      },
+      {
+        "name": "From",
+        "value": "Placement Cell <placement@college.edu>"
+      },
+      {
+        "name": "To",
+        "value": "\"Students 2026\" <students-2026@college.edu>"
+      },
+      {
+        "name": "Cc",
+        "value": "Training Head <training.head@college.edu>, dean.office@college.edu"
+      },
+      {
+        "name": "Subject",
+        "value": "Software Engineering Internship Application - Action Required"
+      },
+      {
+        "name": "Date",
+        "value": "Thu, 28 Aug 2026 09:14:22 +0530"
+      },
+      {
+        "name": "Message-ID",
+        "value": "<CAF=abc123def456ghi789@mail.college.edu>"
+      },
+      {
+        "name": "Reply-To",
+        "value": "Placement Cell <placement@college.edu>"
+      },
+      {
+        "name": "MIME-Version",
+        "value": "1.0"
+      },
+      {
+        "name": "Content-Type",
+        "value": "multipart/mixed; boundary=\"----=_Part_0_123456\""
+      }
+    ],
+    "body": {
+      "size": 0
+    },
+    "parts": [
+      {
+        "partId": "0",
+        "mimeType": "multipart/alternative",
+        "filename": "",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "multipart/alternative; boundary=\"----=_Part_1_234567\""
+          }
+        ],
+        "body": {
+          "size": 0
+        },
+        "parts": [
+          {
+            "partId": "0.0",
+            "mimeType": "text/plain",
+            "filename": "",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/plain; charset=\"UTF-8\""
+              },
+              {
+                "name": "Content-Transfer-Encoding",
+                "value": "base64"
+              }
+            ],
+            "body": {
+              "size": 957,
+              "data": "RGVhciBTdHVkZW50cywKClRoZSBQbGFjZW1lbnQgQ2VsbCBpcyBwbGVhc2VkIHRvIGFubm91bmNlIGEgU29mdHdhcmUgRW5naW5lZXJpbmcgSW50ZXJuc2hpcApvcHBvcnR1bml0eSB3aXRoIE5pbWJ1cyBMYWJzIChhIGZpY3Rpb25hbCBjb21wYW55KSBmb3IgdGhlIDIwMjYgZ3JhZHVhdGluZyBiYXRjaC4KClJvbGU6IFNvZnR3YXJlIEVuZ2luZWVyaW5nIEludGVybgpEdXJhdGlvbjogNiBtb250aHMKTW9kZTogSHlicmlkIChCZW5nYWx1cnUpCgpBQ1RJT04gUkVRVUlSRUQ6CjEuIEZpbGwgdGhlIGFwcGxpY2F0aW9uIGZvcm06IGh0dHBzOi8vZm9ybXMuY29sbGVnZS5lZHUvc2RlLWludGVybnNoaXAtMjAyNgoyLiBVcGxvYWQgeW91ciBsYXRlc3QgcmVzdW1lIChQREYpIGluc2lkZSB0aGUgZm9ybS4KMy4gUmVwbHkgdG8gdGhpcyBlbWFpbCBvbmNlIHlvdSBoYXZlIHN1Ym1pdHRlZC4KClRoZSBhcHBsaWNhdGlvbiBkZWFkbGluZSBpcyA1IFNlcHRlbWJlciAyMDI2LCA2OjAwIFBNIElTVC4KTGF0ZSBvciBpbmNvbXBsZXRlIHN1Ym1pc3Npb25zIHdpbGwgbm90IGJlIGNvbnNpZGVyZWQuCgpTaG9ydGxpc3RlZCBjYW5kaWRhdGVzIHdpbGwgYmUgY29udGFjdGVkIG9uIHRoZWlyIGNvbGxlZ2UgZW1haWwgSURzLgoKUmVnYXJkcywKUGxhY2VtZW50IENlbGwKQ29sbGVnZSBvZiBFbmdpbmVlcmluZwoKT24gV2VkLCAyNyBBdWcgMjAyNiBhdCAxODowMiwgVHJhaW5pbmcgSGVhZCA8dHJhaW5pbmcuaGVhZEBjb2xsZWdlLmVkdT4gd3JvdGU6Cj4gUGxlYXNlIGNpcmN1bGF0ZSB0aGUgaW50ZXJuc2hpcCBub3RpY2UgdG8gYWxsIGZpbmFsIHllYXIgc3R1ZGVudHMuCj4gVGhhbmtzLgotLQpQbGFjZW1lbnQgQ2VsbCB8IENvbGxlZ2Ugb2YgRW5naW5lZXJpbmcKVGhpcyBpcyBhbiBhdXRvbWF0ZWQgbWVzc2FnZS4gRG8gbm90IHNoYXJlIHRoaXMgZW1haWwgb3V0c2lkZSB0aGUgY29sbGVnZS4K"
+            }
+          },
+          {
+            "partId": "0.1",
+            "mimeType": "text/html",
+            "filename": "",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=\"UTF-8\""
+              },
+              {
+                "name": "Content-Transfer-Encoding",
+                "value": "base64"
+              }
+            ],
+            "body": {
+              "size": 846,
+              "data": "PGh0bWw-PGhlYWQ-PHN0eWxlPi54e2NvbG9yOnJlZH08L3N0eWxlPjwvaGVhZD48Ym9keT4KPHA-RGVhciBTdHVkZW50cyw8L3A-CjxwPlRoZSBQbGFjZW1lbnQgQ2VsbCBpcyBwbGVhc2VkIHRvIGFubm91bmNlIGEgPGI-U29mdHdhcmUgRW5naW5lZXJpbmcgSW50ZXJuc2hpcDwvYj4Kb3Bwb3J0dW5pdHkgd2l0aCBOaW1idXMgTGFicyAoYSBmaWN0aW9uYWwgY29tcGFueSkgZm9yIHRoZSAyMDI2IGdyYWR1YXRpbmcgYmF0Y2guPC9wPgo8dWw-CiAgPGxpPlJvbGU6IFNvZnR3YXJlIEVuZ2luZWVyaW5nIEludGVybjwvbGk-CiAgPGxpPkR1cmF0aW9uOiA2IG1vbnRoczwvbGk-CiAgPGxpPk1vZGU6IEh5YnJpZCAoQmVuZ2FsdXJ1KTwvbGk-CjwvdWw-CjxwPjxiPkFDVElPTiBSRVFVSVJFRDo8L2I-PC9wPgo8b2w-CiAgPGxpPkZpbGwgdGhlIGFwcGxpY2F0aW9uIGZvcm06CiAgICAgIDxhIGhyZWY9Imh0dHBzOi8vZm9ybXMuY29sbGVnZS5lZHUvc2RlLWludGVybnNoaXAtMjAyNiI-YXBwbHkgaGVyZTwvYT48L2xpPgogIDxsaT5VcGxvYWQgeW91ciBsYXRlc3QgcmVzdW1lIChQREYpIGluc2lkZSB0aGUgZm9ybS48L2xpPgogIDxsaT5SZXBseSB0byB0aGlzIGVtYWlsIG9uY2UgeW91IGhhdmUgc3VibWl0dGVkLjwvbGk-Cjwvb2w-CjxwPlRoZSBhcHBsaWNhdGlvbiBkZWFkbGluZSBpcyA8Yj41IFNlcHRlbWJlciAyMDI2LCA2OjAwIFBNIElTVDwvYj4uCkxhdGUgb3IgaW5jb21wbGV0ZSBzdWJtaXNzaW9ucyB3aWxsIG5vdCBiZSBjb25zaWRlcmVkLjwvcD4KPHA-UmVnYXJkcyw8YnI-UGxhY2VtZW50IENlbGw8YnI-Q29sbGVnZSBvZiBFbmdpbmVlcmluZzwvcD4KPC9ib2R5PjwvaHRtbD4K"
+            }
+          }
+        ]
+      },
+      {
+        "partId": "1",
+        "mimeType": "application/pdf",
+        "filename": "Internship_JD_SDE_Nimbus_2026.pdf",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/pdf; name=\"Internship_JD_SDE_Nimbus_2026.pdf\""
+          },
+          {
+            "name": "Content-Disposition",
+            "value": "attachment; filename=\"Internship_JD_SDE_Nimbus_2026.pdf\""
+          },
+          {
+            "name": "Content-Transfer-Encoding",
+            "value": "base64"
+          }
+        ],
+        "body": {
+          "attachmentId": "ANGjdJ8k2l3m4n5o6p7q8r9s0t-EXAMPLE",
+          "size": 183456
+        }
+      }
+    ]
+  }
+}

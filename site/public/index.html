@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGENT AMAR — Autonomous Mail Intelligence</title>
+  
+  <!-- Google Fonts: Bricolage Grotesque, Geist, Geist Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;700;800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#1B3C53',
+              surface: '#234C6A',
+              slate: '#456882',
+              beige: '#D2C1B6',
+              bg: '#0f171e',
+              card: '#1e384c',
+              border: 'rgba(69, 104, 130, 0.45)',
+              text: '#F0F4F8',
+              muted: '#9CB3C9',
+              critical: '#FF5C5C',
+              success: '#38D39F',
+              warning: '#F6C90E'
+            }
+          },
+          fontFamily: {
+            brand: ['"Bricolage Grotesque"', 'sans-serif'],
+            sans: ['"Geist"', 'sans-serif'],
+            mono: ['"Geist Mono"', 'monospace']
+          },
+          boxShadow: {
+            'glow-beige': '0 0 25px rgba(210, 193, 182, 0.2)',
+            'glow-critical': '0 0 25px rgba(255, 92, 92, 0.25)',
+            'glow-success': '0 0 20px rgba(56, 211, 159, 0.25)',
+            'card-elevated': '0 10px 30px -5px rgba(0, 0, 0, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      background-color: #0c1217;
+      color: #F0F4F8;
+      font-family: 'Geist', sans-serif;
+      overflow-x: hidden;
+    }
+    
+    .font-brand { font-family: 'Bricolage Grotesque', sans-serif; }
+    .font-mono-timer { font-family: 'Geist Mono', monospace; font-variant-numeric: tabular-nums; }
+    
+    /* Subtle Pulse Animation */
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.15); }
+    }
+    .animate-pulse-glow {
+      animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    /* Custom Scrollbar for sleek mobile view */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(69, 104, 130, 0.5); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #D2C1B6; }
+    
+    .screen-view {
+      display: none;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+    .screen-view.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* Device Mockup Shell */
+    .mobile-viewport {
+      width: 100%;
+      max-width: 412px;
+      min-height: 892px;
+      background-color: #1B3C53;
+      border: 1px solid rgba(69, 104, 130, 0.4);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(35, 76, 106, 0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start sm:py-6 sm:px-4 bg-[#0a0f13]">
+
+  <!-- Top Simulator Bar (Visible on desktop/tablet) -->
+  <header class="w-full max-w-5xl mb-4 hidden sm:flex items-center justify-between px-4 py-3 bg-[#132330] rounded-2xl border border-brand-slate/30 text-xs">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-xl bg-brand-beige text-brand-navy font-brand font-bold flex items-center justify-center text-sm shadow-glow-beige">
+        AM
+      </div>
+      <div>
+        <h1 class="font-brand font-bold text-sm tracking-wide text-white">AGENT AMAR <span class="text-brand-beige font-normal text-[11px] ml-1">· Mail Intelligence</span></h1>
+        <p class="text-brand-muted text-[11px]">Autonomous inbox agent for students & young professionals</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-2">
+      <span class="text-brand-muted text-[11px] mr-1">Quick Switcher:</span>
+      <button onclick="switchScreen('home')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-home">1. Home</button>
+      <button onclick="switchScreen('inbox')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-inbox">2. Smart Inbox</button>
+      <button onclick="switchScreen('actions')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-actions">3. Action Center</button>
+      <button onclick="switchScreen('email-detail')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-email-detail">4. Email Detail</button>
+      <button onclick="switchScreen('activity')" class="px-2.5 py-1 rounded-lg bg-brand-navy hover:bg-brand-surface border border-brand-slate/40 text-brand-text transition-all" id="pill-activity">5. Agent Activity</button>
+    </div>
+  </header>
+
+  <!-- Mobile Frame Container -->
+  <div class="mobile-viewport relative rounded-[38px] overflow-hidden flex flex-col justify-between">
+    
+    <!-- Top System Status Bar -->
+    <div class="sticky top-0 z-40 bg-[#1B3C53]/95 backdrop-blur-md px-6 pt-3 pb-2 flex items-center justify-between text-xs text-brand-muted border-b border-brand-slate/20">
+      <span class="font-mono text-[11px] text-brand-text font-medium" id="system-clock">09:41</span>
+      <div class="w-24 h-4 bg-[#112533] rounded-full mx-auto flex items-center justify-center">
+        <div class="w-2.5 h-2.5 rounded-full bg-brand-slate/60"></div>
+      </div>
+      <div class="flex items-center gap-1.5 text-[11px]">
+        <span class="material-symbols-outlined text-[14px]">signal_cellular_4_bar</span>
+        <span class="material-symbols-outlined text-[14px]">wifi</span>
+        <span class="material-symbols-outlined text-[14px]">battery_full</span>
+      </div>
+    </div>
+
+    <!-- Main Scrollable Screen Views Area -->
+    <main class="flex-1 overflow-y-auto px-5 pt-4 pb-28">
+
+      <!-- ========================================== -->
+      <!-- SCREEN 1: HOME DASHBOARD                   -->
+      <!-- ========================================== -->
+      <section id="screen-home" class="screen-view active">
+        <!-- Branding Header & AI Pulse -->
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-brand font-extrabold text-2xl tracking-tight text-white leading-none">AGENT<br><span class="text-brand-beige">AMAR</span></span>
+            </div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-surface/80 border border-brand-slate/50 text-[11px] text-brand-text">
+              <span class="w-2 h-2 rounded-full bg-brand-success animate-pulse-glow shadow-glow-success"></span>
+              <span>Monitoring your inbox</span>
+            </div>
+          </div>
+          <button onclick="switchScreen('activity')" class="w-10 h-10 rounded-2xl bg-brand-surface hover:bg-brand-slate/40 border border-brand-slate/50 flex items-center justify-center text-brand-beige transition-all shadow-md relative" title="View AI Activity">
+            <span class="material-symbols-outlined text-[20px]">smart_toy</span>
+            <span class="absolute -top-1 -right-1 w-3 h-3 bg-brand-critical rounded-full border-2 border-brand-navy"></span>
+          </button>
+        </div>
+
+        <!-- Summary Banner -->
+        <div class="mb-4 flex items-center justify-between bg-brand-surface/50 border border-brand-slate/40 rounded-xl px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-brand-beige text-[18px]">bolt</span>
+            <span class="font-brand font-bold text-xs uppercase tracking-wider text-white">YOU HAVE 3 THINGS TO HANDLE</span>
+          </div>
+          <span class="font-mono text-xs text-brand-beige font-semibold">3 Active</span>
+        </div>
+
+        <!-- Large Featured Critical Card -->
+        <div class="mb-6 relative rounded-2xl bg-gradient-to-b from-[#255070] to-[#1c3f58] border-2 border-brand-critical/60 p-5 shadow-card-elevated hover:border-brand-critical transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical border border-brand-critical/40 font-mono text-[11px] font-bold tracking-wider uppercase">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-critical animate-ping"></span>
+              CRITICAL
+            </span>
+            <span class="text-xs text-brand-muted font-sans">Placement Cell</span>
+          </div>
+
+          <h3 class="font-brand font-bold text-lg text-white mb-1.5 leading-snug">
+            Software Engineering Internship Application
+          </h3>
+          <p class="text-xs text-brand-text/90 mb-4 leading-relaxed">
+            Google Summer Internship applications close today at 5:00 PM. Requires resume & profile link.
+          </p>
+
+          <div class="flex items-center justify-between bg-brand-navy/80 rounded-xl p-3 border border-brand-slate/40 mb-4">
+            <div>
+              <p class="text-[10px] text-brand-muted uppercase font-mono tracking-wider">DEADLINE</p>
+              <p class="text-xs text-white font-medium">Today · 5:00 PM</p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] text-brand-critical font-mono uppercase tracking-wider">TIME REMAINING</p>
+              <p class="font-mono-timer text-sm font-bold text-brand-critical countdown-display">00:22:14 LEFT</p>
+            </div>
+          </div>
+
+          <button onclick="switchScreen('email-detail')" class="w-full py-3 rounded-xl bg-brand-beige hover:bg-white text-brand-navy font-brand font-bold text-sm tracking-wide transition-all shadow-glow-beige flex items-center justify-center gap-2">
+            <span>VIEW ACTION</span>
+            <span class="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+          </button>
+        </div>
+
+        <!-- Section: ACTION REQUIRED -->
+        <div class="mb-5">
+          <div class="flex items-center justify-between mb-2.5">
+            <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted">ACTION REQUIRED</h4>
+            <span class="font-mono text-[11px] text-brand-muted">2 Tasks</span>
+          </div>
+
+          <div class="space-y-2.5">
+            <!-- Card 1 -->
+            <div onclick="switchScreen('actions')" class="group cursor-pointer rounded-xl bg-brand-surface/70 hover:bg-brand-surface border border-brand-slate/40 p-3.5 transition-all">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-brand-beige">Prof. Sharma</span>
+                <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">Due Tomorrow</span>
+              </div>
+              <p class="font-brand font-bold text-sm text-white mb-1">Machine Learning Assignment 3</p>
+              <p class="text-[11px] text-brand-muted">Submission deadline is tomorrow at 11:59 PM on Canvas portal.</p>
+            </div>
+
+            <!-- Card 2 -->
+            <div onclick="switchScreen('actions')" class="group cursor-pointer rounded-xl bg-brand-surface/70 hover:bg-brand-surface border border-brand-slate/40 p-3.5 transition-all">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-brand-beige">Placement Cell</span>
+                <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">In 6 Hours</span>
+              </div>
+              <p class="font-brand font-bold text-sm text-white mb-1">Complete Placement Registration</p>
+              <p class="text-[11px] text-brand-muted">Verify semester grade transcripts before company verification lock.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: REPLY NEEDED -->
+        <div class="mb-5">
+          <div class="flex items-center justify-between mb-2.5">
+            <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted">REPLY NEEDED</h4>
+            <span class="font-mono text-[11px] text-brand-warning">1 Pending</span>
+          </div>
+
+          <div onclick="switchScreen('inbox')" class="cursor-pointer rounded-xl bg-brand-surface/70 hover:bg-brand-surface border border-brand-slate/40 p-3.5 transition-all">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-brand-beige">Google Recruiting Team</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-brand-warning/20 text-brand-warning font-mono font-medium">REPLY NEEDED</span>
+            </div>
+            <p class="font-brand font-bold text-sm text-white mb-1">Follow-up: Technical Interview Availability</p>
+            <p class="text-[11px] text-brand-muted">Please reply with 3 preferred time slots for next week's rounds.</p>
+          </div>
+        </div>
+
+        <!-- Section: IMPORTANT UPDATES -->
+        <div class="mb-2">
+          <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-2.5">IMPORTANT UPDATES</h4>
+          <div onclick="switchScreen('inbox')" class="cursor-pointer rounded-xl bg-brand-surface/40 hover:bg-brand-surface/60 border border-brand-slate/30 p-3.5 transition-all">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-semibold text-brand-muted">Academic Dean</span>
+              <span class="font-mono text-[10px] text-brand-muted">14:20</span>
+            </div>
+            <p class="font-brand font-bold text-sm text-white mb-1">Mid-Semester Schedule Revision</p>
+            <p class="text-[11px] text-brand-muted">Notice regarding exam week shifts and lab evaluation timetable.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 2: SMART INBOX                      -->
+      <!-- ========================================== -->
+      <section id="screen-inbox" class="screen-view">
+        <!-- Header -->
+        <div class="mb-4">
+          <h2 class="font-brand font-extrabold text-2xl text-white tracking-tight">SMART INBOX</h2>
+          <div class="flex items-center gap-2 text-xs text-brand-beige mt-1">
+            <span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+            <span>AMAR organised 24 emails today.</span>
+          </div>
+        </div>
+
+        <!-- Filter Chips (Horizontal Scroll) -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-none">
+          <button onclick="filterInbox('all')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-beige text-brand-navy transition-all" data-filter="all">All (24)</button>
+          <button onclick="filterInbox('action')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="action">Action Required (2)</button>
+          <button onclick="filterInbox('reply')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="reply">Reply Needed (1)</button>
+          <button onclick="filterInbox('important')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="important">Important (2)</button>
+          <button onclick="filterInbox('info')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all" data-filter="info">Information (4)</button>
+          <button onclick="filterInbox('low')" class="inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-muted border border-brand-slate/30 transition-all" data-filter="low">Low Priority (15)</button>
+        </div>
+
+        <!-- Email List (Categorized by Importance) -->
+        <div class="space-y-3" id="inbox-card-container">
+          
+          <!-- Card 1: Critical -->
+          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border-l-4 border-l-brand-critical border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="action important">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-brand-critical/20 text-brand-critical flex items-center justify-center font-bold text-xs font-brand">PC</div>
+                <span class="text-xs font-semibold text-white">PLACEMENT CELL</span>
+              </div>
+              <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical border border-brand-critical/30">CRITICAL</span>
+            </div>
+            <h4 class="font-brand font-bold text-sm text-white mb-1">Google Summer Internship Application</h4>
+            <p class="text-xs text-brand-text/90 mb-2">Applications close today at 5:00 PM. Mandatory form for CSE/IT batches.</p>
+            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
+              <span class="text-brand-critical">Expires in 22m</span>
+              <span>16:30</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Action Required -->
+          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border-l-4 border-l-brand-beige border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="action">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-brand-navy text-brand-beige flex items-center justify-center font-bold text-xs font-brand">PS</div>
+                <span class="text-xs font-semibold text-white">PROF. SHARMA</span>
+              </div>
+              <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-beige/20 text-brand-beige border border-brand-beige/30">ACTION REQUIRED</span>
+            </div>
+            <h4 class="font-brand font-bold text-sm text-white mb-1">Machine Learning Assignment 3</h4>
+            <p class="text-xs text-brand-text/90 mb-2">Submission deadline is tomorrow at 11:59 PM. Upload Jupyter Notebook.</p>
+            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
+              <span>Due Tomorrow</span>
+              <span>14:15</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Reply Needed -->
+          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border-l-4 border-l-brand-warning border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="reply">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-brand-warning/20 text-brand-warning flex items-center justify-center font-bold text-xs font-brand">GR</div>
+                <span class="text-xs font-semibold text-white">GOOGLE RECRUITING</span>
+              </div>
+              <span class="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-warning/20 text-brand-warning border border-brand-warning/30">REPLY NEEDED</span>
+            </div>
+            <h4 class="font-brand font-bold text-sm text-white mb-1">Interview Availability Confirmation</h4>
+            <p class="text-xs text-brand-text/90 mb-2">Awaiting your reply with 3 preferred time slots for Round 2.</p>
+            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
+              <span class="text-brand-warning">Response needed</span>
+              <span>11:20</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Important Announcement -->
+          <div onclick="switchScreen('email-detail')" class="email-item cursor-pointer rounded-2xl bg-brand-surface border border-brand-slate/40 p-4 hover:border-brand-beige transition-all shadow-md" data-category="important info">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-brand-slate/40 text-brand-text flex items-center justify-center font-bold text-xs font-brand">AC</div>
+                <span class="text-xs font-semibold text-white">ACM CHAPTER</span>
+              </div>
+              <span class="font-mono text-[10px] font-medium px-2 py-0.5 rounded bg-brand-slate/50 text-brand-text">IMPORTANT</span>
+            </div>
+            <h4 class="font-brand font-bold text-sm text-white mb-1">Hackathon 2026 Team Roster</h4>
+            <p class="text-xs text-brand-muted mb-2">Final team confirmation closes tonight at 11:59 PM sharp.</p>
+            <div class="flex items-center justify-between text-[11px] text-brand-muted font-mono pt-1 border-t border-brand-slate/30">
+              <span>Tonight</span>
+              <span>09:45</span>
+            </div>
+          </div>
+
+          <!-- Card 5: Low Priority (Visually Dimmed & Compact) -->
+          <div class="email-item rounded-xl bg-brand-surface/30 border border-brand-slate/20 p-3 opacity-60 hover:opacity-100 transition-opacity" data-category="low">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-medium text-brand-muted">Campus Deals & Coursera</span>
+              <span class="font-mono text-[9px] px-1.5 py-0.5 rounded bg-brand-navy text-brand-muted">LOW PRIORITY</span>
+            </div>
+            <h5 class="text-xs text-brand-text font-medium mb-0.5">Spring 50% Off Flash Sale</h5>
+            <p class="text-[11px] text-brand-muted">Promotional newsletter automatically filtered from active attention.</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 3: ACTION CENTER                    -->
+      <!-- ========================================== -->
+      <section id="screen-actions" class="screen-view">
+        <div class="mb-4">
+          <h2 class="font-brand font-extrabold text-2xl text-white tracking-tight">ACTION CENTER</h2>
+          <p class="text-xs text-brand-beige mt-1 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">psychology</span>
+            Things AMAR thinks you need to handle.
+          </p>
+        </div>
+
+        <!-- Section: CRITICAL NOW -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-critical flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-brand-critical animate-ping"></span>
+              CRITICAL NOW
+            </h3>
+            <span class="font-mono text-xs text-brand-critical font-bold">22 mins remaining</span>
+          </div>
+
+          <div id="action-card-critical" class="rounded-2xl bg-gradient-to-b from-[#275373] to-[#1c3f58] border-2 border-brand-critical p-4 shadow-card-elevated">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-brand font-bold text-sm text-white">Software Engineering Internship Application</span>
+              <span id="status-critical" class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-brand-critical/30 text-brand-critical font-bold uppercase">NOT STARTED</span>
+            </div>
+            
+            <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Related:</span> Placement Cell · Google Summer Internship</p>
+            <p class="text-xs text-brand-text mb-3"><span class="text-brand-beige">Required Action:</span> Complete application form before 5:00 PM.</p>
+            
+            <div class="flex items-center justify-between bg-brand-navy/90 p-2.5 rounded-xl border border-brand-slate/40 mb-3">
+              <span class="font-mono text-xs text-brand-muted">Deadline: Today · 5:00 PM</span>
+              <span class="font-mono text-xs font-bold text-brand-critical countdown-display">00:22:14</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="switchScreen('email-detail')" class="py-2 px-1 rounded-xl bg-brand-beige hover:bg-white text-brand-navy font-brand font-bold text-xs text-center transition-all">
+                OPEN EMAIL
+              </button>
+              <button onclick="markActionDone('action-card-critical', 'status-critical')" class="py-2 px-1 rounded-xl bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-white font-brand text-xs text-center transition-all flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-xs text-brand-success">check</span> DONE
+              </button>
+              <button onclick="snoozeAction('action-card-critical', 'status-critical')" class="py-2 px-1 rounded-xl bg-brand-navy hover:bg-brand-slate/40 border border-brand-slate/40 text-brand-muted font-brand text-xs text-center transition-all">
+                SNOOZE
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: TODAY -->
+        <div class="mb-5">
+          <h3 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-2.5">TODAY</h3>
+          <div class="space-y-3">
+            
+            <!-- Today Task 1 -->
+            <div id="action-card-today-1" class="rounded-2xl bg-brand-surface border border-brand-slate/40 p-4">
+              <div class="flex items-center justify-between mb-1.5">
+                <h4 class="font-brand font-bold text-sm text-white">Reply to Project Meeting Confirmation</h4>
+                <span id="status-today-1" class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-warning/20 text-brand-warning font-bold">NOT STARTED</span>
+              </div>
+              <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Required:</span> Provide 3 available slots for engineering sync.</p>
+              <p class="text-xs text-brand-muted font-mono mb-3">Due Today · 6:00 PM</p>
+              
+              <div class="grid grid-cols-3 gap-2">
+                <button onclick="switchScreen('email-detail')" class="py-1.5 rounded-lg bg-brand-slate/40 hover:bg-brand-slate text-xs font-semibold text-white">OPEN</button>
+                <button onclick="markActionDone('action-card-today-1', 'status-today-1')" class="py-1.5 rounded-lg bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-xs font-semibold text-brand-success">MARK DONE</button>
+                <button onclick="snoozeAction('action-card-today-1', 'status-today-1')" class="py-1.5 rounded-lg bg-brand-navy text-xs text-brand-muted">SNOOZE</button>
+              </div>
+            </div>
+
+            <!-- Today Task 2 -->
+            <div id="action-card-today-2" class="rounded-2xl bg-brand-surface border border-brand-slate/40 p-4">
+              <div class="flex items-center justify-between mb-1.5">
+                <h4 class="font-brand font-bold text-sm text-white">Complete Placement Registration</h4>
+                <span id="status-today-2" class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/60 text-brand-beige font-bold">VIEWED</span>
+              </div>
+              <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Required:</span> Upload verified transcripts on university portal.</p>
+              <p class="text-xs text-brand-muted font-mono mb-3">Due Today · 9:00 PM</p>
+              
+              <div class="grid grid-cols-3 gap-2">
+                <button onclick="switchScreen('email-detail')" class="py-1.5 rounded-lg bg-brand-slate/40 hover:bg-brand-slate text-xs font-semibold text-white">OPEN</button>
+                <button onclick="markActionDone('action-card-today-2', 'status-today-2')" class="py-1.5 rounded-lg bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-xs font-semibold text-brand-success">MARK DONE</button>
+                <button onclick="snoozeAction('action-card-today-2', 'status-today-2')" class="py-1.5 rounded-lg bg-brand-navy text-xs text-brand-muted">SNOOZE</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Section: UPCOMING -->
+        <div class="mb-2">
+          <h3 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-2.5">UPCOMING</h3>
+          <div id="action-card-upcoming-1" class="rounded-2xl bg-brand-surface/70 border border-brand-slate/40 p-4">
+            <div class="flex items-center justify-between mb-1.5">
+              <h4 class="font-brand font-bold text-sm text-white">Machine Learning Assignment</h4>
+              <span id="status-upcoming-1" class="font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate/50 text-brand-text font-medium">NOT STARTED</span>
+            </div>
+            <p class="text-xs text-brand-muted mb-1"><span class="text-brand-beige">Required:</span> Submit Neural Net report.</p>
+            <p class="text-xs text-brand-muted font-mono mb-3">Due Tomorrow · 11:59 PM</p>
+            
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="switchScreen('email-detail')" class="py-1.5 rounded-lg bg-brand-slate/40 hover:bg-brand-slate text-xs font-semibold text-white">OPEN</button>
+              <button onclick="markActionDone('action-card-upcoming-1', 'status-upcoming-1')" class="py-1.5 rounded-lg bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-xs font-semibold text-brand-success">MARK DONE</button>
+              <button onclick="snoozeAction('action-card-upcoming-1', 'status-upcoming-1')" class="py-1.5 rounded-lg bg-brand-navy text-xs text-brand-muted">SNOOZE</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 4: EMAIL INTELLIGENCE DETAIL        -->
+      <!-- ========================================== -->
+      <section id="screen-email-detail" class="screen-view">
+        <!-- Top Back Nav -->
+        <div class="flex items-center justify-between mb-4">
+          <button onclick="switchScreen('inbox')" class="inline-flex items-center gap-1 text-xs text-brand-beige font-semibold hover:text-white transition-colors">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            Back
+          </button>
+          <div class="flex items-center gap-2 text-brand-muted">
+            <button class="p-1.5 rounded-lg bg-brand-surface hover:text-white"><span class="material-symbols-outlined text-sm">bookmark</span></button>
+            <button class="p-1.5 rounded-lg bg-brand-surface hover:text-white"><span class="material-symbols-outlined text-sm">share</span></button>
+          </div>
+        </div>
+
+        <!-- Email Sender Header -->
+        <div class="mb-4">
+          <div class="flex items-center gap-2.5 mb-1.5">
+            <div class="w-8 h-8 rounded-xl bg-brand-critical/20 text-brand-critical font-brand font-bold text-xs flex items-center justify-center border border-brand-critical/30">
+              PC
+            </div>
+            <div>
+              <h3 class="font-bold text-sm text-white leading-tight">Placement Cell</h3>
+              <p class="text-[11px] text-brand-muted">placements@university.edu.in</p>
+            </div>
+          </div>
+          <h2 class="font-brand font-bold text-base text-white mt-2 leading-snug">
+            Google Summer Internship 2026 - Applications Open (Action Required)
+          </h2>
+        </div>
+
+        <!-- AMAR ANALYSIS CARD (Core Intelligence) -->
+        <div class="rounded-2xl bg-gradient-to-b from-[#244e6e] to-[#1a3b53] border border-brand-beige/50 p-4 shadow-card-elevated mb-5 relative overflow-hidden">
+          <div class="absolute -right-6 -top-6 w-24 h-24 bg-brand-beige/10 rounded-full blur-xl pointer-events-none"></div>
+          
+          <div class="flex items-center justify-between pb-3 border-b border-brand-slate/40 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-brand-beige animate-pulse-glow shadow-glow-beige"></span>
+              <span class="font-brand font-extrabold text-xs tracking-wider text-brand-beige uppercase">AMAR ANALYSIS</span>
+            </div>
+            <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical border border-brand-critical/40 font-bold">
+              CRITICAL
+            </span>
+          </div>
+
+          <!-- Structured Intelligence Grid -->
+          <div class="grid grid-cols-2 gap-2.5 mb-3.5 text-xs">
+            <div class="bg-brand-navy/80 rounded-xl p-2.5 border border-brand-slate/40">
+              <span class="font-mono text-[10px] text-brand-muted uppercase block mb-0.5">CATEGORY</span>
+              <span class="font-semibold text-white">Internship Opportunity</span>
+            </div>
+            <div class="bg-brand-navy/80 rounded-xl p-2.5 border border-brand-slate/40">
+              <span class="font-mono text-[10px] text-brand-muted uppercase block mb-0.5">DEADLINE</span>
+              <span class="font-semibold text-white">Today · 5:00 PM</span>
+            </div>
+            <div class="col-span-2 bg-brand-navy/80 rounded-xl p-2.5 border border-brand-slate/40">
+              <span class="font-mono text-[10px] text-brand-muted uppercase block mb-0.5">ACTION REQUIRED</span>
+              <span class="font-semibold text-brand-beige">Complete application form & upload resume</span>
+            </div>
+            <div class="col-span-2 flex items-center justify-between bg-brand-critical/10 rounded-xl p-2.5 border border-brand-critical/30">
+              <span class="font-mono text-[11px] text-brand-critical font-semibold uppercase">TIME REMAINING</span>
+              <span class="font-mono text-sm font-bold text-brand-critical countdown-display">00:22:14</span>
+            </div>
+          </div>
+
+          <!-- Quick Summary -->
+          <div class="pt-1">
+            <p class="font-mono text-[10px] uppercase text-brand-beige font-semibold mb-1">QUICK SUMMARY</p>
+            <p class="text-xs text-brand-text leading-relaxed bg-brand-surface/40 p-2.5 rounded-xl border border-brand-slate/30">
+              “This email contains an internship application opportunity that closes today at 5:00 PM. Complete the application form before the deadline.”
+            </p>
+          </div>
+        </div>
+
+        <!-- Original Email Content -->
+        <div class="rounded-2xl bg-brand-surface/40 border border-brand-slate/30 p-4 mb-6">
+          <h4 class="font-mono text-[10px] uppercase text-brand-muted font-bold tracking-wider mb-2.5">ORIGINAL EMAIL CONTENT</h4>
+          <div class="text-xs text-brand-text/90 space-y-2.5 leading-relaxed font-sans">
+            <p>Dear Students,</p>
+            <p>Google is officially opening applications for the 2026 Summer Software Engineering Internship program. Eligible batches: 2026 & 2027 graduating students.</p>
+            <p>All interested candidates must submit their application via the portal link below along with their updated resume and GitHub profile URL before <strong>5:00 PM today sharp</strong>. Late submissions will strictly not be accepted.</p>
+            <p class="text-brand-beige font-mono text-[11px] break-all bg-brand-navy/60 p-2 rounded-lg border border-brand-slate/30">
+              Portal Link: https://careers.google.com/students/internships-2026
+            </p>
+            <p>Best regards,<br>Placement & Training Cell</p>
+          </div>
+        </div>
+
+        <!-- Bottom Action CTA Buttons -->
+        <div class="space-y-2">
+          <button onclick="showToast('Redirecting to Application Portal...')" class="w-full py-3 rounded-xl bg-brand-beige hover:bg-white text-brand-navy font-brand font-bold text-sm tracking-wide transition-all shadow-glow-beige flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-sm">open_in_new</span>
+            OPEN APPLICATION
+          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="showToast('Marked as done! Action Center updated.'); switchScreen('actions');" class="py-2.5 rounded-xl bg-brand-surface hover:bg-brand-success/20 border border-brand-slate/50 text-white font-brand text-xs flex items-center justify-center gap-1.5 transition-all">
+              <span class="material-symbols-outlined text-xs text-brand-success">check_circle</span>
+              MARK AS DONE
+            </button>
+            <button onclick="showToast('Snoozed for 10 minutes.'); switchScreen('home');" class="py-2.5 rounded-xl bg-brand-navy hover:bg-brand-slate/40 border border-brand-slate/40 text-brand-muted font-brand text-xs transition-all">
+              REMIND ME LATER
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 5: AGENT ACTIVITY                   -->
+      <!-- ========================================== -->
+      <section id="screen-activity" class="screen-view">
+        <div class="mb-4">
+          <h2 class="font-brand font-extrabold text-2xl text-white tracking-tight">AMAR ACTIVITY</h2>
+          <p class="text-xs text-brand-beige mt-1 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-brand-success animate-pulse-glow"></span>
+            Here’s what I’ve been working on.
+          </p>
+        </div>
+
+        <!-- Timeline Container -->
+        <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-brand-critical before:via-brand-beige before:to-brand-slate/40">
+          
+          <!-- Node 1: Reminder Sent -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-critical border-2 border-brand-navy shadow-glow-critical flex items-center justify-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+            </div>
+            <div class="rounded-xl bg-brand-surface border border-brand-critical/40 p-3 shadow-md">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-critical font-bold">16:45:01</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded-full bg-brand-critical/20 text-brand-critical font-bold uppercase">REMINDER SENT</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">Dispatched urgent reminder</p>
+              <p class="text-[11px] text-brand-muted">User hasn't viewed Placement Cell email with 22 minutes to deadline.</p>
+            </div>
+          </div>
+
+          <!-- Node 2: User Inactivity Audit -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-beige border-2 border-brand-navy shadow-glow-beige flex items-center justify-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-navy"></span>
+            </div>
+            <div class="rounded-xl bg-brand-surface border border-brand-slate/40 p-3">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-beige font-semibold">16:45:00</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/50 text-brand-text">INACTIVITY CHECK</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">USER HAS NOT VIEWED EMAIL</p>
+              <p class="text-[11px] text-brand-muted">15-minute audit window elapsed without user opening critical message.</p>
+            </div>
+          </div>
+
+          <!-- Node 3: Priority Assigned -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
+            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-muted">16:30:18</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-critical/20 text-brand-critical font-semibold">CRITICAL</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">PRIORITY ASSIGNED: CRITICAL</p>
+              <p class="text-[11px] text-brand-muted">Elevated priority threshold due to impending 5:00 PM cutoff.</p>
+            </div>
+          </div>
+
+          <!-- Node 4: Deadline Found -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
+            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-muted">16:30:17</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">EXTRACTION</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">DEADLINE FOUND</p>
+              <p class="text-[11px] text-brand-muted">Extracted time token: Today · 5:00 PM IST (Confidence: 99.8%)</p>
+            </div>
+          </div>
+
+          <!-- Node 5: Action Detected -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
+            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-muted">16:30:16</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">PARSER</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">ACTION DETECTED</p>
+              <p class="text-[11px] text-brand-muted">Mandatory Google Form submission & resume upload detected.</p>
+            </div>
+          </div>
+
+          <!-- Node 6: Analysing Content -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
+            <div class="rounded-xl bg-brand-surface/80 border border-brand-slate/40 p-3">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-muted">16:30:14</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">NLP</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">ANALYSING CONTENT</p>
+              <p class="text-[11px] text-brand-muted">Parsing email context, eligibility criteria, and links...</p>
+            </div>
+          </div>
+
+          <!-- Node 7: New Email Detected -->
+          <div class="relative">
+            <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-brand-slate border-2 border-brand-navy flex items-center justify-center"></div>
+            <div class="rounded-xl bg-brand-surface/60 border border-brand-slate/30 p-3">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-mono text-[11px] text-brand-muted">16:30:12</span>
+                <span class="font-mono text-[9px] px-2 py-0.5 rounded bg-brand-slate/40 text-brand-text">INGESTION</span>
+              </div>
+              <p class="font-brand font-bold text-xs text-white">NEW EMAIL DETECTED</p>
+              <p class="text-[11px] text-brand-muted">Placement Cell &lt;placements@university.edu.in&gt;</p>
+            </div>
+          </div>
+
+          <!-- Earlier Autonomous Activity Group -->
+          <div class="pt-2">
+            <h4 class="font-brand font-bold text-xs uppercase tracking-wider text-brand-muted mb-3">EARLIER TODAY</h4>
+            
+            <div class="space-y-2.5">
+              <div class="rounded-xl bg-brand-surface/40 border border-brand-slate/20 p-2.5 text-xs">
+                <div class="flex items-center justify-between font-mono text-[10px] text-brand-muted mb-0.5">
+                  <span>14:15:20</span>
+                  <span class="text-brand-beige font-semibold">ASSIGNMENT SYNC</span>
+                </div>
+                <p class="font-bold text-white text-[11px]">Prof. Sharma ML Assignment 3 logged to Action Center</p>
+              </div>
+
+              <div class="rounded-xl bg-brand-surface/40 border border-brand-slate/20 p-2.5 text-xs">
+                <div class="flex items-center justify-between font-mono text-[10px] text-brand-muted mb-0.5">
+                  <span>11:20:05</span>
+                  <span class="text-brand-warning font-semibold">REPLY REQUIRED</span>
+                </div>
+                <p class="font-bold text-white text-[11px]">Google Recruiting interview availability flagged</p>
+              </div>
+
+              <div class="rounded-xl bg-brand-surface/40 border border-brand-slate/20 p-2.5 text-xs">
+                <div class="flex items-center justify-between font-mono text-[10px] text-brand-muted mb-0.5">
+                  <span>09:00:12</span>
+                  <span class="text-brand-muted">NOISE SUPPRESSION</span>
+                </div>
+                <p class="font-bold text-white text-[11px]">Auto-filtered 18 promotional newsletters into Low Priority</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (Persistent Mobile Tab Bar) -->
+    <nav class="absolute bottom-0 left-0 right-0 z-50 h-20 px-4 bg-[#142d3f]/95 backdrop-blur-xl border-t border-brand-slate/40 flex items-center justify-around">
+      
+      <!-- Tab 1: Home -->
+      <button onclick="switchScreen('home')" class="nav-tab flex flex-col items-center justify-center transition-all group active" data-tab="home">
+        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center bg-brand-beige text-brand-navy mb-0.5 transition-all">
+          <span class="material-symbols-outlined text-[18px]">home</span>
+        </div>
+        <span class="tab-label font-sans text-[10px] font-bold text-brand-beige">Home</span>
+      </button>
+
+      <!-- Tab 2: Inbox -->
+      <button onclick="switchScreen('inbox')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="inbox">
+        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all">
+          <span class="material-symbols-outlined text-[18px]">mail</span>
+        </div>
+        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Inbox</span>
+      </button>
+
+      <!-- Tab 3: Actions -->
+      <button onclick="switchScreen('actions')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="actions">
+        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all relative">
+          <span class="material-symbols-outlined text-[18px]">task_alt</span>
+          <span class="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-brand-critical"></span>
+        </div>
+        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Actions</span>
+      </button>
+
+      <!-- Tab 4: Activity -->
+      <button onclick="switchScreen('activity')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="activity">
+        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all">
+          <span class="material-symbols-outlined text-[18px]">history_edu</span>
+        </div>
+        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Activity</span>
+      </button>
+
+      <!-- Tab 5: Profile/Settings -->
+      <button onclick="showToast('Profile & AI Settings: Autonomous agent engine running active.')" class="nav-tab flex flex-col items-center justify-center transition-all group" data-tab="profile">
+        <div class="tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all">
+          <span class="material-symbols-outlined text-[18px]">person</span>
+        </div>
+        <span class="tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text">Profile</span>
+      </button>
+
+    </nav>
+
+    <!-- Interactive Toast Notification Alert -->
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-brand-navy border border-brand-beige text-brand-text text-xs font-semibold shadow-2xl opacity-0 pointer-events-none transition-all duration-300 transform translate-y-3 flex items-center gap-2">
+      <span class="material-symbols-outlined text-brand-beige text-sm">info</span>
+      <span id="toast-msg">Action updated!</span>
+    </div>
+
+  </div>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    // System Clock Simulation
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const clockEl = document.getElementById('system-clock');
+      if (clockEl) clockEl.textContent = `${hours}:${minutes}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Live Monospace Countdown Clocks (Counting down 22 minutes)
+    let totalSeconds = 22 * 60 + 14;
+    function updateCountdowns() {
+      if (totalSeconds > 0) totalSeconds--;
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+      const seconds = String(totalSeconds % 60).padStart(2, '0');
+      const display = `${hours}:${minutes}:${seconds} LEFT`;
+      
+      document.querySelectorAll('.countdown-display').forEach(el => {
+        el.textContent = `${hours}:${minutes}:${seconds}`;
+      });
+    }
+    setInterval(updateCountdowns, 1000);
+
+    // Screen Switching Logic
+    function switchScreen(screenName) {
+      // Deactivate all screen views
+      document.querySelectorAll('.screen-view').forEach(view => {
+        view.classList.remove('active');
+      });
+
+      // Activate targeted screen view
+      const targetView = document.getElementById('screen-' + screenName);
+      if (targetView) {
+        targetView.classList.add('active');
+      }
+
+      // Scroll to top
+      const scrollContainer = document.querySelector('main');
+      if (scrollContainer) scrollContainer.scrollTop = 0;
+
+      // Update Bottom Navigation Tabs
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        const tabIndicator = tab.querySelector('.tab-indicator');
+        const tabLabel = tab.querySelector('.tab-label');
+        
+        if (tab.dataset.tab === screenName || (screenName === 'email-detail' && tab.dataset.tab === 'inbox')) {
+          tabIndicator.className = 'tab-indicator w-10 h-7 rounded-full flex items-center justify-center bg-brand-beige text-brand-navy mb-0.5 transition-all';
+          tabLabel.className = 'tab-label font-sans text-[10px] font-bold text-brand-beige';
+        } else {
+          tabIndicator.className = 'tab-indicator w-10 h-7 rounded-full flex items-center justify-center text-brand-muted group-hover:text-brand-text mb-0.5 transition-all';
+          tabLabel.className = 'tab-label font-sans text-[10px] text-brand-muted group-hover:text-brand-text';
+        }
+      });
+
+      // Update Desktop Quick Switcher Pills
+      document.querySelectorAll('[id^="pill-"]').forEach(pill => {
+        pill.classList.remove('bg-brand-beige', 'text-brand-navy', 'font-bold');
+        pill.classList.add('bg-brand-navy', 'text-brand-text');
+      });
+      const activePill = document.getElementById('pill-' + screenName);
+      if (activePill) {
+        activePill.classList.remove('bg-brand-navy', 'text-brand-text');
+        activePill.classList.add('bg-brand-beige', 'text-brand-navy', 'font-bold');
+      }
+    }
+
+    // Smart Inbox Filter Chips Logic
+    function filterInbox(category) {
+      document.querySelectorAll('.inbox-filter-btn').forEach(btn => {
+        if (btn.dataset.filter === category) {
+          btn.className = 'inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-beige text-brand-navy transition-all';
+        } else {
+          btn.className = 'inbox-filter-btn whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold bg-brand-surface hover:bg-brand-slate/50 text-brand-text border border-brand-slate/40 transition-all';
+        }
+      });
+
+      const cards = document.querySelectorAll('.email-item');
+      cards.forEach(card => {
+        if (category === 'all') {
+          card.style.display = 'block';
+        } else {
+          const cardCategories = card.dataset.category || '';
+          if (cardCategories.includes(category)) {
+            card.style.display = 'block';
+          } else {
+            card.style.display = 'none';
+          }
+        }
+      });
+    }
+
+    // Mark Action Done Interaction
+    function markActionDone(cardId, statusId) {
+      const statusEl = document.getElementById(statusId);
+      const cardEl = document.getElementById(cardId);
+      if (statusEl) {
+        statusEl.textContent = 'COMPLETED';
+        statusEl.className = 'font-mono text-[10px] px-2 py-0.5 rounded-full bg-brand-success/20 text-brand-success font-bold';
+      }
+      if (cardEl) {
+        cardEl.style.opacity = '0.75';
+        cardEl.style.borderColor = '#38D39F';
+      }
+      showToast('Task marked as completed! AI knowledge base updated.');
+    }
+
+    // Snooze Action Interaction
+    function snoozeAction(cardId, statusId) {
+      const statusEl = document.getElementById(statusId);
+      const cardEl = document.getElementById(cardId);
+      if (statusEl) {
+        statusEl.textContent = 'SNOOZED';
+        statusEl.className = 'font-mono text-[10px] px-2 py-0.5 rounded bg-brand-slate text-brand-muted font-bold';
+      }
+      if (cardEl) {
+        cardEl.style.opacity = '0.6';
+      }
+      showToast('Snoozed: AMAR will remind you in 15 minutes.');
+    }
+
+    // Toast Notifications
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      if (toast && toastMsg) {
+        toastMsg.textContent = message;
+        toast.classList.remove('opacity-0', 'translate-y-3', 'pointer-events-none');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', 'translate-y-3', 'pointer-events-none');
+        }, 2800);
+      }
+    }
+  </script>
+</body>
+</html>

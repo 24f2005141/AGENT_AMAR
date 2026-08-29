@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Action Center - Agent Amar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Geist+Mono:wght@500&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-fixed-dim": "#d4c3b8",
+                      "outline": "#8c9197",
+                      "background": "#0f1417",
+                      "on-tertiary": "#392e27",
+                      "secondary-container": "#244c6a",
+                      "on-tertiary-container": "#b0a095",
+                      "on-surface-variant": "#c2c7cd",
+                      "surface": "#0f1417",
+                      "secondary": "#a4cbee",
+                      "on-tertiary-fixed-variant": "#50443c",
+                      "tertiary-fixed": "#f1dfd4",
+                      "surface-bright": "#353a3d",
+                      "on-secondary-fixed": "#001e31",
+                      "primary-fixed": "#cbe6ff",
+                      "on-secondary": "#003350",
+                      "tertiary": "#d4c3b8",
+                      "surface-dim": "#0f1417",
+                      "on-error-container": "#ffdad6",
+                      "on-primary-fixed": "#001e30",
+                      "inverse-on-surface": "#2c3134",
+                      "error-container": "#93000a",
+                      "surface-container-low": "#171c1f",
+                      "tertiary-container": "#42372f",
+                      "surface-container-lowest": "#0a0f12",
+                      "primary": "#aacae7",
+                      "on-secondary-container": "#96bde0",
+                      "inverse-primary": "#43627a",
+                      "surface-tint": "#aacae7",
+                      "on-primary-container": "#87a6c2",
+                      "on-error": "#690005",
+                      "on-tertiary-fixed": "#231a13",
+                      "error": "#ffb4ab",
+                      "primary-container": "#1b3c53",
+                      "surface-container-high": "#262b2e",
+                      "surface-container": "#1b2023",
+                      "secondary-fixed": "#cce5ff",
+                      "on-primary-fixed-variant": "#2a4a61",
+                      "secondary-fixed-dim": "#a4cbee",
+                      "on-secondary-fixed-variant": "#214a68",
+                      "on-surface": "#dfe3e7",
+                      "primary-fixed-dim": "#aacae7",
+                      "inverse-surface": "#dfe3e7",
+                      "surface-variant": "#313539",
+                      "on-background": "#dfe3e7",
+                      "outline-variant": "#42474d",
+                      "on-primary": "#10334a",
+                      "surface-container-highest": "#313539"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-lg": "32px",
+                      "unit": "4px",
+                      "gutter": "16px",
+                      "stack-md": "16px",
+                      "stack-sm": "8px",
+                      "container-padding": "24px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Geist"
+                      ],
+                      "label-caps": [
+                              "Geist"
+                      ],
+                      "headline-lg": [
+                              "Bricolage Grotesque"
+                      ],
+                      "mono-timer": [
+                              "Geist Mono"
+                      ],
+                      "body-sm": [
+                              "Geist"
+                      ],
+                      "body-md": [
+                              "Geist"
+                      ],
+                      "headline-xl": [
+                              "Bricolage Grotesque"
+                      ],
+                      "headline-md": [
+                              "Bricolage Grotesque"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "mono-timer": [
+                              "14px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-xl": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .ai-pulse {
+            animation: pulse-ai 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ai {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 195, 184, 0.4); }
+            50% { opacity: .8; transform: scale(1.05); box-shadow: 0 0 0 4px rgba(212, 195, 184, 0); }
+        }
+        .urgent-pulse {
+            animation: pulse-urgent 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-urgent {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 171, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(255, 180, 171, 0); }
+        }
+        
+        /* Hide scrollbar for clean UI but allow scrolling */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md antialiased min-h-screen flex flex-col pt-16 pb-24">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-container-padding h-16 w-full fixed top-0 z-50 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<span class="font-headline-md text-headline-md text-primary tracking-tight">AGENT AMAR</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-on-surface font-bold uppercase">AI ACTIVE</span>
+<div class="w-2 h-2 rounded-full bg-tertiary ai-pulse"></div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-[600px] mx-auto px-gutter md:px-container-padding pt-stack-lg flex flex-col gap-stack-lg">
+<!-- Header Section -->
+<section class="flex flex-col gap-stack-sm">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">ACTION CENTER</h1>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-sm">auto_awesome</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Things AMAR thinks you need to handle.</p>
+</div>
+</section>
+<!-- CRITICAL NOW Section -->
+<section class="flex flex-col gap-stack-md">
+<div class="flex items-center gap-2 border-b border-outline-variant pb-2">
+<span class="material-symbols-outlined text-error text-sm">warning</span>
+<h2 class="font-label-caps text-label-caps text-error tracking-wider uppercase">CRITICAL NOW</h2>
+</div>
+<!-- Hero Card -->
+<div class="bg-primary-container border border-error rounded-lg flex flex-col overflow-hidden shadow-[0_0_15px_rgba(255,180,171,0.1)] relative">
+<!-- Priority Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-error urgent-pulse"></div>
+<div class="p-gutter flex flex-col gap-stack-md ml-[4px]">
+<!-- Card Header -->
+<div class="flex justify-between items-start gap-4">
+<div class="flex flex-col gap-1">
+<span class="font-label-caps text-label-caps text-on-primary-container">Placement Cell · Google Summer Internship</span>
+<h3 class="font-headline-md text-[20px] leading-tight text-on-surface">Software Engineering Internship Application</h3>
+</div>
+<div class="bg-error text-on-error font-label-caps text-[10px] px-2 py-1 rounded-full whitespace-nowrap uppercase">CRITICAL</div>
+</div>
+<!-- Action Details -->
+<div class="bg-surface-container rounded p-3 border border-outline-variant/30 flex flex-col gap-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-tertiary text-[16px] mt-0.5">task</span>
+<p class="font-body-sm text-body-sm text-on-surface"><span class="font-semibold text-tertiary">Required Action:</span> Fill out Google Form &amp; upload updated CV before deadline</p>
+</div>
+</div>
+<!-- Metadata -->
+<div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2">
+<div class="flex items-center gap-1.5 text-error">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span class="font-body-sm text-body-sm font-semibold">Today · 5:00 PM</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>
+<span class="font-mono-timer text-mono-timer text-error font-bold">00:22:14</span>
+</div>
+<div class="flex items-center gap-1.5 ml-auto">
+<div class="w-1.5 h-1.5 rounded-full bg-outline"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Not Started</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex gap-2 mt-2 pt-4 border-t border-outline-variant/30 overflow-x-auto pb-1">
+<button class="bg-tertiary text-on-tertiary font-label-caps text-label-caps px-4 py-2 rounded font-bold whitespace-nowrap hover:bg-tertiary-fixed transition-colors">OPEN EMAIL</button>
+<button class="border border-outline-variant text-on-surface font-label-caps text-label-caps px-4 py-2 rounded whitespace-nowrap hover:bg-surface-variant transition-colors">MARK DONE</button>
+<button class="text-on-surface-variant font-label-caps text-label-caps px-4 py-2 rounded whitespace-nowrap hover:text-on-surface transition-colors">SNOOZE</button>
+</div>
+</div>
+</div>
+</section>
+<!-- TODAY Section -->
+<section class="flex flex-col gap-stack-md">
+<div class="flex items-center gap-2 border-b border-outline-variant pb-2">
+<span class="material-symbols-outlined text-secondary text-sm">today</span>
+<h2 class="font-label-caps text-label-caps text-secondary tracking-wider uppercase">TODAY</h2>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Today Card 1 -->
+<div class="bg-surface-container border border-outline-variant rounded flex flex-col relative group hover:border-tertiary/50 transition-colors">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-tertiary/50 group-hover:bg-tertiary transition-colors"></div>
+<div class="p-3 pl-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Google Recruiting Team</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface leading-tight mt-1">Reply to Technical Interview Availability</h3>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant bg-surface px-2 py-1 rounded text-[10px] font-mono-timer whitespace-nowrap border border-outline-variant/30">
+<div class="w-1.5 h-1.5 rounded-full bg-outline"></div>
+                                NOT STARTED
+                            </div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1"><span class="text-tertiary-fixed-dim">Action:</span> Send 3 preferred interview time slots</p>
+<div class="flex items-center gap-1.5 text-on-surface-variant mt-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span class="font-label-caps text-[11px]">Today · 6:00 PM</span>
+</div>
+<div class="flex gap-2 mt-2">
+<button class="bg-tertiary text-on-tertiary font-label-caps text-[10px] px-3 py-1.5 rounded font-bold hover:bg-tertiary-fixed transition-colors">OPEN EMAIL</button>
+<button class="border border-outline-variant text-on-surface font-label-caps text-[10px] px-3 py-1.5 rounded hover:bg-surface-variant transition-colors">MARK DONE</button>
+<button class="text-on-surface-variant font-label-caps text-[10px] px-3 py-1.5 rounded hover:text-on-surface transition-colors">SNOOZE</button>
+</div>
+</div>
+</div>
+<!-- Today Card 2 -->
+<div class="bg-surface-container border border-outline-variant rounded flex flex-col relative group hover:border-tertiary/50 transition-colors">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-surface-variant group-hover:bg-tertiary/50 transition-colors"></div>
+<div class="p-3 pl-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Placement Cell</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface leading-tight mt-1 opacity-80">Complete Placement Portal Registration</h3>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant bg-surface px-2 py-1 rounded text-[10px] font-mono-timer whitespace-nowrap border border-outline-variant/30">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+                                VIEWED
+                            </div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 opacity-80"><span class="text-tertiary-fixed-dim">Action:</span> Verify grade transcripts and contact info</p>
+<div class="flex items-center gap-1.5 text-on-surface-variant mt-1 opacity-80">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span class="font-label-caps text-[11px]">Today · 9:00 PM</span>
+</div>
+<div class="flex gap-2 mt-2 opacity-80">
+<button class="bg-tertiary/20 text-tertiary font-label-caps text-[10px] px-3 py-1.5 rounded font-bold hover:bg-tertiary/30 transition-colors border border-tertiary/30">OPEN EMAIL</button>
+<button class="border border-outline-variant text-on-surface font-label-caps text-[10px] px-3 py-1.5 rounded hover:bg-surface-variant transition-colors">MARK DONE</button>
+<button class="text-on-surface-variant font-label-caps text-[10px] px-3 py-1.5 rounded hover:text-on-surface transition-colors">SNOOZE</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- UPCOMING Section -->
+<section class="flex flex-col gap-stack-md">
+<div class="flex items-center gap-2 border-b border-outline-variant pb-2">
+<span class="material-symbols-outlined text-outline text-sm">event_upcoming</span>
+<h2 class="font-label-caps text-label-caps text-outline tracking-wider uppercase">UPCOMING</h2>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Upcoming Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant/50 rounded flex flex-col relative group hover:border-outline-variant transition-colors">
+<div class="absolute left-0 top-0 bottom-0 w-[2px] bg-secondary-container"></div>
+<div class="p-3 pl-4 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<span class="font-label-caps text-[10px] text-on-surface-variant">Prof. Sharma</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface leading-tight mt-1 opacity-70">Machine Learning Assignment 3</h3>
+</div>
+<div class="flex flex-col items-end gap-1">
+<div class="bg-secondary-container text-on-secondary-container font-label-caps text-[9px] px-1.5 py-0.5 rounded uppercase">MEDIUM</div>
+<div class="flex items-center gap-1 text-on-surface-variant text-[10px] font-mono-timer whitespace-nowrap">
+<div class="w-1.5 h-1.5 rounded-full bg-outline"></div>
+                                    NOT STARTED
+                                </div>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 opacity-70"><span class="text-tertiary-fixed-dim">Action:</span> Upload Jupyter Notebook &amp; PDF report</p>
+<div class="flex items-center gap-1.5 text-on-surface-variant mt-1 opacity-70">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+<span class="font-label-caps text-[11px]">Tomorrow · 11:59 PM</span>
+</div>
+<div class="flex gap-2 mt-2 opacity-70">
+<button class="bg-surface-variant text-on-surface font-label-caps text-[10px] px-3 py-1.5 rounded font-bold hover:bg-surface-bright transition-colors border border-outline-variant/30">OPEN EMAIL</button>
+<button class="border border-outline-variant/50 text-on-surface font-label-caps text-[10px] px-3 py-1.5 rounded hover:bg-surface-variant transition-colors">MARK DONE</button>
+<button class="text-on-surface-variant font-label-caps text-[10px] px-3 py-1.5 rounded hover:text-on-surface transition-colors">SNOOZE</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-gutter bg-surface-container/90 backdrop-blur-md border-t border-outline-variant md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all w-16">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="font-label-caps text-[10px]">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all w-16">
+<span class="material-symbols-outlined mb-1">mail</span>
+<span class="font-label-caps text-[10px]">Inbox</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 scale-90 duration-200 w-20">
+<span class="material-symbols-outlined mb-1" data-weight="fill" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+<span class="font-label-caps text-[10px]">Actions</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all w-16">
+<span class="material-symbols-outlined mb-1">history_edu</span>
+<span class="font-label-caps text-[10px]">Activity</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all w-16">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-caps text-[10px]">Profile</span>
+</button>
+</nav>
+<!-- Desktop Side Nav Placeholder (Hidden on Mobile, required for structural completeness based on instructions logic though prompt asked for mobile screen, maintaining responsive integrity) -->
+<div class="hidden md:flex flex-col fixed left-0 top-16 bottom-0 w-64 bg-surface-container border-r border-outline-variant z-40 p-4 gap-2">
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant p-3 rounded-lg transition-colors w-full text-left">
+<span class="material-symbols-outlined">home</span>
+<span class="font-body-md font-semibold">Home</span>
+</button>
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant p-3 rounded-lg transition-colors w-full text-left">
+<span class="material-symbols-outlined">mail</span>
+<span class="font-body-md font-semibold">Inbox</span>
+</button>
+<button class="flex items-center gap-3 bg-primary-container text-on-primary-container p-3 rounded-lg transition-colors w-full text-left">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+<span class="font-body-md font-bold">Actions</span>
+</button>
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant p-3 rounded-lg transition-colors w-full text-left">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="font-body-md font-semibold">Activity</span>
+</button>
+<button class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-variant p-3 rounded-lg transition-colors w-full text-left">
+<span class="material-symbols-outlined">person</span>
+<span class="font-body-md font-semibold">Profile</span>
+</button>
+</div>
+<!-- Adjust main container for desktop nav -->
+<style>
+        @media (min-width: 768px) {
+            main {
+                margin-left: 16rem;
+                max-width: calc(100% - 16rem);
+                align-items: center;
+            }
+            main > * {
+                width: 100%;
+                max-width: 800px;
+            }
+        }
+    </style>
+<script>
+        // Simple timer update script for realism
+        document.addEventListener('DOMContentLoaded', () => {
+            const timerElements = document.querySelectorAll('.font-mono-timer.text-error');
+            
+            timerElements.forEach(el => {
+                let timeStr = el.textContent;
+                let [hours, minutes, seconds] = timeStr.split(':').map(Number);
+                let totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+
+                setInterval(() => {
+                    if (totalSeconds > 0) {
+                        totalSeconds--;
+                        let h = Math.floor(totalSeconds / 3600);
+                        let m = Math.floor((totalSeconds % 3600) / 60);
+                        let s = totalSeconds % 60;
+                        el.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                    }
+                }, 1000);
+            });
+        });
+    </script>
+</body></html>

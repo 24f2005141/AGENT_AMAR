@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Amar Activity</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&amp;family=Geist+Mono:wght@100..900&amp;family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-fixed-variant": "#2a4a61",
+                      "inverse-primary": "#43627a",
+                      "surface-variant": "#313539",
+                      "primary-fixed-dim": "#aacae7",
+                      "on-tertiary": "#392e27",
+                      "surface-container-highest": "#313539",
+                      "on-surface": "#dfe3e7",
+                      "on-surface-variant": "#c2c7cd",
+                      "surface-dim": "#0f1417",
+                      "surface-container-high": "#262b2e",
+                      "primary": "#aacae7",
+                      "surface-container-lowest": "#0a0f12",
+                      "tertiary-container": "#42372f",
+                      "primary-container": "#1b3c53",
+                      "outline-variant": "#42474d",
+                      "secondary-fixed-dim": "#a4cbee",
+                      "outline": "#8c9197",
+                      "on-primary-fixed": "#001e30",
+                      "on-background": "#dfe3e7",
+                      "secondary-container": "#244c6a",
+                      "secondary-fixed": "#cce5ff",
+                      "secondary": "#a4cbee",
+                      "inverse-surface": "#dfe3e7",
+                      "on-secondary-container": "#96bde0",
+                      "on-primary": "#10334a",
+                      "error": "#ffb4ab",
+                      "on-tertiary-container": "#b0a095",
+                      "on-error": "#690005",
+                      "on-tertiary-fixed": "#231a13",
+                      "on-secondary-fixed-variant": "#214a68",
+                      "on-secondary-fixed": "#001e31",
+                      "primary-fixed": "#cbe6ff",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed": "#f1dfd4",
+                      "tertiary": "#d4c3b8",
+                      "on-primary-container": "#87a6c2",
+                      "surface-container-low": "#171c1f",
+                      "tertiary-fixed-dim": "#d4c3b8",
+                      "surface-bright": "#353a3d",
+                      "on-tertiary-fixed-variant": "#50443c",
+                      "on-secondary": "#003350",
+                      "surface-tint": "#aacae7",
+                      "error-container": "#93000a",
+                      "surface": "#0f1417",
+                      "surface-container": "#1b2023",
+                      "inverse-on-surface": "#2c3134",
+                      "background": "#0f1417"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-lg": "32px",
+                      "gutter": "16px",
+                      "container-padding": "24px",
+                      "unit": "4px",
+                      "stack-sm": "8px",
+                      "stack-md": "16px"
+              },
+              "fontFamily": {
+                      "headline-xl": [
+                              "Bricolage Grotesque"
+                      ],
+                      "headline-md": [
+                              "Bricolage Grotesque"
+                      ],
+                      "mono-timer": [
+                              "Geist Mono"
+                      ],
+                      "headline-lg": [
+                              "Bricolage Grotesque"
+                      ],
+                      "body-lg": [
+                              "Geist"
+                      ],
+                      "body-sm": [
+                              "Geist"
+                      ],
+                      "label-caps": [
+                              "Geist"
+                      ],
+                      "body-md": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "headline-xl": [
+                              "40px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "mono-timer": [
+                              "14px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .timeline-line {
+            position: absolute;
+            left: 23px; /* Center of the icon */
+            top: 40px;
+            bottom: -20px;
+            width: 1px;
+            background: linear-gradient(to bottom, #456882 0%, rgba(69,104,130,0) 100%);
+            z-index: 0;
+        }
+        .ai-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(210, 193, 182, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(210, 193, 182, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(210, 193, 182, 0); }
+        }
+        .ai-glow {
+            box-shadow: 0 0 12px 2px rgba(210, 193, 182, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface border-b border-outline-variant flex items-center justify-between px-container-padding h-16 md:hidden">
+<button class="text-primary dark:text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-100 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface uppercase tracking-tighter">AMAR ACTIVITY</h1>
+<button class="text-primary dark:text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-100 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+</header>
+<!-- Web Top Nav (Hidden on Mobile) -->
+<header class="hidden md:flex fixed top-0 w-full z-50 bg-surface dark:bg-surface border-b border-outline-variant items-center justify-between px-container-padding h-16">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" data-icon="smart_toy">smart_toy</span>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface uppercase tracking-tighter">AMAR ACTIVITY</h1>
+</div>
+<nav class="flex gap-8">
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+                Home
+            </a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="inbox">inbox</span>
+                Inbox
+            </a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="bolt">bolt</span>
+                Actions
+            </a>
+<a class="text-primary dark:text-primary font-label-caps text-label-caps flex flex-col items-center" href="#">
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1">
+<span class="material-symbols-outlined mb-1" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+                Activity
+            </a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+                Profile
+            </a>
+</nav>
+<button class="text-primary dark:text-primary hover:bg-surface-container-high transition-colors active:scale-95 duration-100 p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="pt-24 px-gutter max-w-[1440px] mx-auto md:px-container-padding">
+<!-- Header Section -->
+<section class="mb-stack-lg border-b border-outline-variant pb-stack-md">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-2 h-2 rounded-full bg-tertiary ai-pulse"></div>
+<span class="font-label-caps text-label-caps text-tertiary">AI Active</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Here’s what I’ve been working on.</p>
+</section>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter md:gap-container-padding">
+<!-- Intelligence Timeline -->
+<section class="md:col-span-8 bg-surface-container rounded-xl p-stack-md border border-outline-variant">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-stack-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="history">history</span>
+                    Recent Operations
+                </h2>
+<div class="relative pl-2">
+<!-- Node 1 -->
+<div class="relative flex gap-4 mb-stack-md group">
+<div class="timeline-line"></div>
+<div class="relative z-10 w-10 h-10 rounded-full bg-primary-container border border-outline-variant flex items-center justify-center shrink-0 group-hover:bg-secondary-container transition-colors">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="send">send</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant hover:border-tertiary transition-colors ai-glow">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-primary">16:45:01</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-tertiary uppercase">Reminder Sent</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">Dispatched urgent reminder for Software Engineering Internship.</p>
+</div>
+</div>
+<!-- Node 2 -->
+<div class="relative flex gap-4 mb-stack-md group">
+<div class="timeline-line"></div>
+<div class="relative z-10 w-10 h-10 rounded-full bg-surface border border-outline-variant flex items-center justify-center shrink-0 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="timer">timer</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-on-surface-variant">16:45:00</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">User Has Not Viewed Email</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">15-minute inactivity check on critical deadline.</p>
+</div>
+</div>
+<!-- Node 3 -->
+<div class="relative flex gap-4 mb-stack-md group">
+<div class="timeline-line"></div>
+<div class="relative z-10 w-10 h-10 rounded-full bg-error-container border border-outline-variant flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-error text-[20px]" data-icon="priority_high">priority_high</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant border-l-[3px] border-l-error">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-on-surface-variant">16:30:18</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-error uppercase">Priority Assigned</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">Assigned priority: CRITICAL.</p>
+</div>
+</div>
+<!-- Node 4 -->
+<div class="relative flex gap-4 mb-stack-md group">
+<div class="timeline-line"></div>
+<div class="relative z-10 w-10 h-10 rounded-full bg-surface border border-outline-variant flex items-center justify-center shrink-0 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="event">event</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-on-surface-variant">16:30:17</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Deadline Found</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">Extracted deadline: Today · 5:00 PM.</p>
+</div>
+</div>
+<!-- Node 5 -->
+<div class="relative flex gap-4 mb-stack-md group">
+<div class="timeline-line"></div>
+<div class="relative z-10 w-10 h-10 rounded-full bg-surface border border-outline-variant flex items-center justify-center shrink-0 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="rule">rule</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-on-surface-variant">16:30:16</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Action Detected</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">Internship application required via portal form.</p>
+</div>
+</div>
+<!-- Node 6 -->
+<div class="relative flex gap-4 mb-stack-md group">
+<div class="timeline-line"></div>
+<div class="relative z-10 w-10 h-10 rounded-full bg-surface border border-outline-variant flex items-center justify-center shrink-0 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="search_insights">search_insights</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-on-surface-variant">16:30:14</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Analysing Content</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant italic">Understanding email context and requirements...</p>
+</div>
+</div>
+<!-- Node 7 -->
+<div class="relative flex gap-4 group">
+<div class="relative z-10 w-10 h-10 rounded-full bg-surface border border-outline-variant flex items-center justify-center shrink-0 group-hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="mark_email_unread">mark_email_unread</span>
+</div>
+<div class="flex-1 bg-surface rounded-lg p-3 border border-outline-variant">
+<div class="flex items-center gap-2 mb-1 flex-wrap">
+<span class="font-mono-timer text-mono-timer text-on-surface-variant">16:30:12</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">New Email Detected</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface">Incoming email from Placement Cell.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Earlier Summary -->
+<section class="md:col-span-4 flex flex-col gap-stack-md">
+<div class="bg-surface-container rounded-xl p-stack-md border border-outline-variant">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider mb-stack-md pb-2 border-b border-outline-variant">Earlier Today</h3>
+<ul class="flex flex-col gap-3">
+<li class="flex flex-col gap-1 pb-3 border-b border-outline-variant last:border-0 last:pb-0 relative pl-3 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-3 before:w-[2px] before:bg-primary-container hover:bg-surface-container-high p-2 rounded transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-mono-timer text-mono-timer text-primary">14:15</span>
+<span class="font-label-caps text-label-caps text-on-surface">Assignment Deadline Added</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Prof. Sharma Machine Learning Assignment 3.</p>
+</li>
+<li class="flex flex-col gap-1 pb-3 border-b border-outline-variant last:border-0 last:pb-0 relative pl-3 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-3 before:w-[2px] before:bg-primary-container hover:bg-surface-container-high p-2 rounded transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-mono-timer text-mono-timer text-primary">11:20</span>
+<span class="font-label-caps text-label-caps text-on-surface">Reply Needed Flagged</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Google Recruiting interview availability.</p>
+</li>
+<li class="flex flex-col gap-1 pb-3 border-b border-outline-variant last:border-0 last:pb-0 relative pl-3 before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-3 before:w-[2px] before:bg-primary-container hover:bg-surface-container-high p-2 rounded transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-mono-timer text-mono-timer text-primary">09:00</span>
+<span class="font-label-caps text-label-caps text-on-surface">Inbox Filtered</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">18 promotional emails moved to low priority.</p>
+</li>
+</ul>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-surface-container-low dark:bg-surface-container-low border-t border-outline-variant flex justify-around items-center h-20 px-gutter">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]" data-icon="home">home</span>
+<span class="font-label-caps text-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]" data-icon="inbox">inbox</span>
+<span class="font-label-caps text-label-caps">Inbox</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]" data-icon="bolt">bolt</span>
+<span class="font-label-caps text-label-caps">Actions</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-label-caps text-label-caps">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]" data-icon="person">person</span>
+<span class="font-label-caps text-label-caps">Profile</span>
+</a>
+</nav>
+</body></html>

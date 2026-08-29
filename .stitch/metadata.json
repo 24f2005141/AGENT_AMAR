@@ -1,0 +1,45 @@
+﻿{
+  "name": "projects/17648819819210029385",
+  "projectId": "17648819819210029385",
+  "title": "AGENT AMAR - Autonomous Mail Intelligence",
+  "visibility": "PRIVATE",
+  "projectType": "PROJECT_DESIGN",
+  "origin": "STITCH",
+  "deviceType": "MOBILE",
+  "designTheme": {
+    "colorMode": "DARK",
+    "font": "BRICOLAGE_GROTESQUE",
+    "roundness": "ROUND_FOUR",
+    "customColor": "#1b3c53",
+    "headlineFont": "BRICOLAGE_GROTESQUE",
+    "bodyFont": "GEIST",
+    "labelFont": "GEIST"
+  },
+  "screens": {
+    "home": {
+      "id": "f5bcd4d56b8e4fabb1adce2397d4a56b",
+      "sourceScreen": "projects/17648819819210029385/screens/f5bcd4d56b8e4fabb1adce2397d4a56b",
+      "title": "Home Dashboard"
+    },
+    "inbox": {
+      "id": "f2f12a144ae44503a69bda5b5a1d08af",
+      "sourceScreen": "projects/17648819819210029385/screens/f2f12a144ae44503a69bda5b5a1d08af",
+      "title": "Smart Inbox"
+    },
+    "actions": {
+      "id": "2e9eb7f3e2304e73bd4e5346059e24a7",
+      "sourceScreen": "projects/17648819819210029385/screens/2e9eb7f3e2304e73bd4e5346059e24a7",
+      "title": "Action Center"
+    },
+    "email-detail": {
+      "id": "f5e74841cc92460396a09e7e67c5b812",
+      "sourceScreen": "projects/17648819819210029385/screens/f5e74841cc92460396a09e7e67c5b812",
+      "title": "Email Intelligence Detail"
+    },
+    "activity": {
+      "id": "238e6d09fb694151b5ca7a41636497ef",
+      "sourceScreen": "projects/17648819819210029385/screens/238e6d09fb694151b5ca7a41636497ef",
+      "title": "Agent Activity"
+    }
+  }
+}

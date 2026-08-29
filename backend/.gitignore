@@ -1,0 +1,25 @@
+# Secrets & credentials — never commit
+.env
+.env.*
+!.env.example
+.tokens/
+*.token.json
+secrets/
+client_secret*.json
+
+# Local databases (Phase 9)
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
