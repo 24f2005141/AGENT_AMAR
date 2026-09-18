@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/agent_analysis.dart';
 import '../models/email.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 import 'priority_badge.dart';
 
 class EmailListCard extends StatelessWidget {
@@ -100,9 +101,17 @@ class EmailListCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Text(
-                          DateFormat('hh:mm a').format(email.receivedAt),
-                          style: AppTheme.mono(fontSize: 10, color: AppColors.textMuted),
+                        const SizedBox(width: Gap.sm),
+                        // At large font scales the timestamp itself grows;
+                        // let it shrink rather than overflow the row.
+                        Flexible(
+                          child: Text(
+                            DateFormat('hh:mm a').format(email.receivedAt),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                            style: AppTheme.mono(fontSize: 10, color: AppColors.textMuted),
+                          ),
                         ),
                       ],
                     ),
@@ -128,26 +137,35 @@ class EmailListCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Row(
+                    // Wrap, not Row: three chips + a long category name do not
+                    // fit on a 320px phone, and at 2.0x font they do not fit
+                    // on any phone. They now flow onto another line.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         PriorityBadge(priority: email.analysis.priority, isCompact: true),
-                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.surface,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
-                            email.analysis.category,
-                            style: AppTheme.label(
-                              fontSize: 9,
-                              color: AppColors.textMuted,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Text(
+                              email.analysis.category,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTheme.label(
+                                fontSize: 9,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         ),
                         if (email.analysis.actionRequired && !email.userState.isCompleted) ...[
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(

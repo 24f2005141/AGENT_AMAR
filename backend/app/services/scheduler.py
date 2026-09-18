@@ -32,15 +32,15 @@ out.
 from __future__ import annotations
 
 import asyncio
-import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
 
 from app.core.config import Settings, get_settings
+from app.core.logging_setup import secure_logger
 from app.db.session import db_session
 from app.services.deadline_monitor_service import DeadlineMonitorService
 
-logger = logging.getLogger("agent_amar.scheduler")
+logger = secure_logger("agent_amar.scheduler")
 
 # small delay before the first tick so app startup finishes first
 _WARMUP_SECONDS = 0.5
@@ -69,6 +69,7 @@ class MonitorScheduler:
         self.cycles: dict[str, int] = {"deadline": 0, "reminder": 0, "gmail": 0}
         self.failures: dict[str, int] = {"deadline": 0, "reminder": 0, "gmail": 0}
         self.last_error: str | None = None
+        self._connected_users = 0
 
     # -- lifecycle -----------------------------------------------------
 
@@ -192,41 +193,52 @@ class MonitorScheduler:
         )
 
     def _gmail_cycle(self) -> None:
-        """Incremental Gmail sync — process only newly-added messages.
+        """Incremental Gmail sync for **every connected user** (Phase 15).
 
-        Skips cleanly (no error) when Gmail is not connected. Builds a
-        short-lived GmailService from the stored credentials; the sync itself
-        is the same :class:`GmailSyncService` the manual endpoint uses.
+        Iterates the users table, builds a short-lived GmailService from each
+        user's stored (encrypted) credentials, and runs the same
+        :class:`GmailSyncService` the manual endpoint uses. A user whose Gmail
+        is not connected / whose token cannot be refreshed is skipped, not an
+        error. The per-user lock in the sync service prevents overlap with a
+        manual ``POST /api/v1/gmail/sync``.
         """
+        from app.db.models import User
         from app.services.gmail_auth_service import GmailAuthService
         from app.services.gmail_service import GmailService
         from app.services.gmail_sync_service import GmailSyncService
-        from app.services.token_store import FileTokenStore
+        from app.services.token_store import DbTokenStore
 
-        auth = GmailAuthService(
-            self.settings, FileTokenStore(str(self.settings.token_storage_dir))
-        )
-        try:
-            creds = auth.get_credentials()
-        except Exception:  # noqa: BLE001 — expired/unreadable token = "not connected"
-            creds = None
-        if creds is None:
-            logger.info("gmail sync cycle skipped — Gmail not connected")
-            return
-
-        logger.info("gmail sync cycle started")
         with db_session() as session:
-            result = GmailSyncService(session, settings=self.settings).sync_new_messages(
-                GmailService(credentials=creds)
-            )
+            users = list(session.query(User).all())
+            auth = GmailAuthService(self.settings, DbTokenStore(session))
+            connected = 0
+            for user in users:
+                try:
+                    creds = auth.get_credentials(account_id=str(user.id))
+                except Exception:  # noqa: BLE001 — expired/unreadable = "not connected"
+                    creds = None
+                if creds is None:
+                    continue
+                connected += 1
+                try:
+                    result = GmailSyncService(
+                        session, user_pk=user.id, settings=self.settings
+                    ).sync_new_messages(GmailService(credentials=creds))
+                    logger.info(
+                        "gmail sync cycle: user=%s status=%s new=%d processed=%d",
+                        user.id, result.get("status"),
+                        len(result.get("new_message_ids", [])),
+                        result.get("processed", 0),
+                    )
+                except Exception:  # noqa: BLE001 — one user must not stall the rest
+                    self.failures["gmail"] = self.failures.get("gmail", 0) + 1
+                    logger.exception("gmail sync cycle failed for user=%s", user.id)
+
         self.cycles["gmail"] += 1
         self.last_gmail_sync = _utcnow()
-        logger.info(
-            "gmail sync cycle completed: status=%s new=%d processed=%d",
-            result.get("status"),
-            len(result.get("new_message_ids", [])),
-            result.get("processed", 0),
-        )
+        self._connected_users = connected
+        if not connected:
+            logger.info("gmail sync cycle: no connected users")
 
     # -- observability --------------------------------------------
 
@@ -239,6 +251,7 @@ class MonitorScheduler:
             "reminder_check_interval_seconds": self.settings.reminder_check_interval_seconds,
             "gmail_sync_enabled": bool(self.settings.gmail_sync_enabled),
             "gmail_sync_interval_seconds": self.settings.gmail_sync_interval_seconds,
+            "connected_users": self._connected_users,
             "last_deadline_check": _iso(self.last_deadline_check),
             "last_reminder_check": _iso(self.last_reminder_check),
             "last_gmail_sync": _iso(self.last_gmail_sync),

@@ -3,6 +3,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Phase 16 — Firebase: uncomment together with the line in settings.gradle.kts
+    // after placing android/app/google-services.json (see docs/PUSH_NOTIFICATIONS.md).
+    // id("com.google.gms.google-services")
 }
 
 android {

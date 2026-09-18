@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#010F2A</color>
+    <!-- Native cold-start background, shown for the instant before the Flutter
+         engine paints the in-app splash screen — same dark tone so there is no
+         white flash. Matches AppColors.background in app_theme.dart. -->
+    <color name="launch_background">#0C141B</color>
+</resources>

@@ -18,6 +18,7 @@ import base64
 import binascii
 from collections.abc import Iterator
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime, parseaddr
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
@@ -28,6 +29,7 @@ from app.core.errors import (
     GmailNotConnectedError,
     MessageNotFoundError,
 )
+from app.services.gmail_auth_service import GMAIL_SEND_SCOPE
 
 if TYPE_CHECKING:  # avoid importing google libs at module import time for tests
     from google.oauth2.credentials import Credentials
@@ -277,6 +279,29 @@ class GmailFetchNotConfigured(GmailNotConnectedError):
 _UNREAD_QUERY_LABEL = "UNREAD"
 _MAX_RESULTS_CAP = 100
 
+# Gmail's own system label for spam — the single source of truth. We never
+# attempt to detect spam ourselves; we only ever check for this label's
+# presence in Gmail-supplied metadata (`labelIds`), as early as possible in
+# every ingestion path.
+SPAM_LABEL = "SPAM"
+
+
+def is_spam_message(raw_or_labels: dict[str, Any] | list[str] | None) -> bool:
+    """True if a raw Gmail message resource (or a bare ``labelIds`` list)
+    carries the Gmail ``SPAM`` system label.
+
+    Accepts either a full raw message resource (reads its ``labelIds``) or an
+    already-extracted label list (e.g. from a Gmail History API event), so
+    every call site can use whichever it already has on hand.
+    """
+    if raw_or_labels is None:
+        return False
+    if isinstance(raw_or_labels, dict):
+        labels = raw_or_labels.get("labelIds") or []
+    else:
+        labels = raw_or_labels
+    return SPAM_LABEL in labels
+
 
 class GmailService:
     """Thin authenticated Gmail client.
@@ -361,6 +386,45 @@ class GmailService:
         except Exception as exc:
             raise _translate_api_error(exc, message_id=message_id) from exc
 
+    def send_reply(
+        self,
+        *,
+        raw_message: bytes,
+        thread_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Send a pre-built RFC 5322 message via ``users.messages.send``.
+
+        ``From`` is set by Gmail to the authenticated account — the caller
+        cannot spoof it. ``thread_id`` (the RAW Gmail thread id) keeps the reply
+        inside the original conversation.
+
+        Raises :class:`GmailNotConnectedError` when the stored credentials do not
+        carry the ``gmail.send`` scope (a user connected before the reply feature
+        existed must reconnect once).
+        """
+        creds_scopes = set(getattr(self._credentials, "scopes", None) or [])
+        if self._credentials is not None and creds_scopes and GMAIL_SEND_SCOPE not in creds_scopes:
+            raise GmailNotConnectedError(
+                "Sending a reply needs additional Google permission. "
+                "Please reconnect your Gmail account."
+            )
+        body: dict[str, Any] = {
+            "raw": base64.urlsafe_b64encode(raw_message).decode("ascii")
+        }
+        if thread_id:
+            body["threadId"] = thread_id
+        try:
+            return (
+                self.service.users()
+                .messages()
+                .send(userId=self.user_id, body=body)
+                .execute()
+            )
+        except GmailNotConnectedError:
+            raise
+        except Exception as exc:
+            raise _translate_api_error(exc) from exc
+
     def get_profile_email(self) -> str | None:
         """Return the connected account's email address, or ``None``."""
         try:
@@ -403,6 +467,13 @@ class GmailService:
         old for Gmail to serve (HTTP 404) — the caller re-baselines.
         Newest-first is NOT guaranteed; ids are de-duplicated and capped at
         ``max_messages``.
+
+        The returned historyId is a **safe resume point**: on a normal run it is
+        the mailbox's current historyId; when the ``max_messages`` cap is hit
+        mid-stream it is the id of the last history *record* fully consumed, so
+        the next sync picks up the remaining new mail instead of skipping it. The
+        pipeline is idempotent on ``email_id``, so the small overlap this can
+        cause never duplicates or resets an email.
         """
         start = str(start_history_id)
         latest = start
@@ -429,27 +500,151 @@ class GmailService:
                     raise GmailHistoryExpiredError() from exc
                 raise _translate_api_error(exc) from exc
 
-            if response.get("historyId") is not None:
-                latest = str(response["historyId"])
+            mailbox_history_id = (
+                str(response["historyId"]) if response.get("historyId") is not None else latest
+            )
 
             for record in response.get("history") or []:
+                record_id = str(record.get("id") or latest)
                 for added in record.get("messagesAdded") or []:
                     msg = added.get("message") or {}
                     mid = msg.get("id")
                     if not mid or mid in seen:
                         continue
-                    if label_id and label_id not in (msg.get("labelIds") or []):
+                    labels = msg.get("labelIds") or []
+                    if label_id and label_id not in labels:
+                        continue
+                    # Exclude Gmail-flagged spam as early as possible — straight
+                    # from the history event's own label metadata, no fetch.
+                    if is_spam_message(labels):
                         continue
                     seen.add(mid)
                     ids.append(mid)
                     if len(ids) >= max_messages:
-                        return ids, latest
+                        # resume from this record next time — do NOT jump to the
+                        # mailbox head or the rest of the batch is lost.
+                        return ids, record_id
+                # this whole record is consumed — safe to advance past it
+                latest = record_id
 
+            latest = mailbox_history_id
             page_token = response.get("nextPageToken")
             if not page_token:
                 break
 
         return ids, latest
+
+    def list_spam_label_changes_since(
+        self,
+        start_history_id: str,
+        *,
+        max_results: int = 500,
+        max_pages: int = 20,
+    ) -> tuple[set[str], set[str]]:
+        """Message ids that gained / lost the ``SPAM`` label since ``start_history_id``.
+
+        Uses ``users.history.list`` with ``historyTypes=['labelAdded',
+        'labelRemoved']`` — the same call shape as
+        :meth:`list_added_message_ids_since`, just requesting label-change
+        records instead of new-message records, so an already-ingested email
+        that the user (or Gmail) later marks as spam is still detected even
+        though no new ``messageAdded`` event is emitted for it.
+
+        Returns ``(newly_spammed_ids, unspammed_ids)``. A message appearing in
+        both (flapped back and forth within the window) is resolved to its
+        *last* observed state. Never raises :class:`GmailHistoryExpiredError`
+        silently — same as the sibling method, the caller re-baselines.
+        """
+        start = str(start_history_id)
+        newly_spammed: dict[str, int] = {}
+        unspammed: dict[str, int] = {}
+        order = 0
+        page_token: str | None = None
+
+        for _ in range(max(1, max_pages)):
+            params: dict[str, Any] = {
+                "userId": self.user_id,
+                "startHistoryId": start,
+                "historyTypes": ["labelAdded", "labelRemoved"],
+            }
+            if page_token:
+                params["pageToken"] = page_token
+            try:
+                response = self.service.users().history().list(**params).execute()
+            except GmailNotConnectedError:
+                raise
+            except Exception as exc:
+                if _error_status(exc) == 404:
+                    raise GmailHistoryExpiredError() from exc
+                raise _translate_api_error(exc) from exc
+
+            for record in response.get("history") or []:
+                for added in record.get("labelsAdded") or []:
+                    mid = (added.get("message") or {}).get("id")
+                    if mid and SPAM_LABEL in (added.get("labelIds") or []):
+                        order += 1
+                        newly_spammed[mid] = order
+                for removed in record.get("labelsRemoved") or []:
+                    mid = (removed.get("message") or {}).get("id")
+                    if mid and SPAM_LABEL in (removed.get("labelIds") or []):
+                        order += 1
+                        unspammed[mid] = order
+
+            page_token = response.get("nextPageToken")
+            if not page_token:
+                break
+
+        # resolve flapping by last-observed-order; cap the result size
+        spammed_ids = {m for m, o in newly_spammed.items()
+                       if o > unspammed.get(m, -1)}
+        unspammed_ids = {m for m, o in unspammed.items()
+                         if o > newly_spammed.get(m, -1)}
+        return set(list(spammed_ids)[:max_results]), set(list(unspammed_ids)[:max_results])
+
+
+# ---------------------------------------------------------------------------
+# Reply MIME construction (threading-aware)
+# ---------------------------------------------------------------------------
+
+
+def _re_subject(subject: str | None) -> str:
+    """``"Re: ..."`` without stacking a second ``Re:``."""
+    base = (subject or "").strip()
+    if not base:
+        return "Re:"
+    return base if base[:3].lower() == "re:" else f"Re: {base}"
+
+
+def build_reply_mime(
+    *,
+    to_addresses: list[str],
+    body_text: str,
+    subject: str | None,
+    in_reply_to: str | None = None,
+    references: str | None = None,
+    cc_addresses: list[str] | None = None,
+) -> bytes:
+    """Build an RFC 5322 reply as bytes, ready for ``users.messages.send``.
+
+    ``From`` is deliberately NOT set — Gmail fills it with the authenticated
+    account. ``In-Reply-To`` / ``References`` are the standard threading headers;
+    combined with ``threadId`` on the send call they place the reply in the
+    original conversation.
+    """
+    msg = EmailMessage()
+    if to_addresses:
+        msg["To"] = ", ".join(to_addresses)
+    if cc_addresses:
+        msg["Cc"] = ", ".join(cc_addresses)
+    msg["Subject"] = _re_subject(subject)
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+        # References = the parent's References chain + the parent Message-ID.
+        chain = " ".join(part for part in [(references or "").strip(), in_reply_to.strip()] if part)
+        if chain:
+            msg["References"] = chain
+    msg.set_content(body_text)
+    return msg.as_bytes()
 
 
 def _error_status(exc: Exception) -> int | None:

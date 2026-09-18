@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="70dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_deadline_countdown"
+    android:previewLayout="@layout/widget_deadline_countdown"
+    android:resizeMode="horizontal|vertical"
+    android:description="@string/widget_deadline_description"
+    android:widgetCategory="home_screen" />

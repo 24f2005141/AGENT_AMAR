@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sorted widget surface: matches AppColors.surfaceCard / border in the
+     Flutter theme so a widget looks like a piece of the app, not a system
+     panel. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#14202B" />
+    <corners android:radius="20dp" />
+    <stroke android:width="1dp" android:color="#22344A" />
+</shape>

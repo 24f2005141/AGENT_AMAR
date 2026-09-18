@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import MetaData, String
+from sqlalchemy import MetaData, String, Text
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import TypeDecorator
+
+from app.core import crypto
 
 _NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -50,6 +52,30 @@ class TZDateTime(TypeDecorator):
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
+
+
+class EncryptedString(TypeDecorator):
+    """Transparent AES-256-GCM encryption for a text column (Phase 14).
+
+    * At the DB level this is just ``TEXT`` — no schema migration.
+    * ``process_bind_param`` encrypts on write; ``process_result_value``
+      decrypts on read. Agents and API responses keep seeing plaintext.
+    * When ``DATA_ENCRYPTION_ENABLED=false`` it is a passthrough.
+    * Rows written before encryption was enabled are read back unchanged
+      (legacy plaintext); the next write re-persists them encrypted.
+
+    Do NOT use for indexed / filtered / range-queried columns — ciphertext is
+    opaque to SQL. See ``docs/SECURITY.md`` for the full field list.
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        return crypto.encrypt(value)
+
+    def process_result_value(self, value, dialect):
+        return crypto.decrypt(value)
 
 
 def utcnow() -> datetime:

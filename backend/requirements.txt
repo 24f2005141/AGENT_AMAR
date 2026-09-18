@@ -31,9 +31,35 @@ google-api-python-client>=2.100
 anthropic>=0.40
 openai>=1.40
 google-genai
-# --- Phase 9: persistence (SQLite dev; postgresql:// later, no code change) ---
+# --- Persistence: SQLite for local dev, PostgreSQL in production ---
 SQLAlchemy>=2.0,<3.0
+# Production driver. `postgresql+psycopg://…` (psycopg 3). Not needed for the
+# SQLite dev database or the test suite, but harmless to install everywhere.
+psycopg[binary]>=3.1
+# Schema migrations. Production never uses create_all — see migrations/.
+alembic>=1.13
+
+# --- Local ML pre-classifier (hybrid triage) ---
+# CPU-only TF-IDF + LogisticRegression. Imported lazily: the app and the
+# deterministic-only test suite run without a trained model. Only `python -m
+# app.ml.train` and prediction touch scikit-learn.
+scikit-learn>=1.3
+joblib>=1.3
+
+# --- Phase 14: data-at-rest encryption (AES-256-GCM) ---
+# Already present transitively via google-auth; pinned explicitly here.
+cryptography>=42.0
+
+# --- Phase 16: backend push notifications (Firebase Cloud Messaging) ---
+# Only needed when FIREBASE_CREDENTIALS_FILE / _JSON is configured. The import is
+# lazy — the app + test suite run fine without it / with push disabled.
+firebase-admin>=6.5
 
 # --- Testing + Ollama HTTP client ---
 pytest>=8.0
 httpx>=0.27          # fastapi.testclient.TestClient + the Ollama LLM client
+
+# --- Production WSGI/ASGI server ---
+# uvicorn (above) is the ASGI server; gunicorn supervises N uvicorn workers in
+# the container so a crashed worker is replaced without dropping the service.
+gunicorn>=22.0

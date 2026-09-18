@@ -24,7 +24,9 @@ class ActionRepository:
         stmt = select(ActionRecord).where(ActionRecord.email_pk == email_pk).order_by(ActionRecord.id)
         return list(self.session.execute(stmt).scalars().all())
 
-    def list_pending(self, *, limit: int = 100) -> list[tuple[ActionRecord, EmailRecord]]:
+    def list_pending(
+        self, *, user_pk: int | None = None, limit: int = 100
+    ) -> list[tuple[ActionRecord, EmailRecord]]:
         stmt = (
             select(ActionRecord, EmailRecord)
             .join(EmailRecord, ActionRecord.email_pk == EmailRecord.id)
@@ -32,6 +34,8 @@ class ActionRepository:
             .order_by(EmailRecord.priority_score.desc(), ActionRecord.id)
             .limit(max(1, min(limit, 500)))
         )
+        if user_pk is not None:
+            stmt = stmt.where(EmailRecord.user_pk == user_pk)
         return [tuple(row) for row in self.session.execute(stmt).all()]
 
     def set_status(self, action: ActionRecord, status: str) -> ActionRecord:

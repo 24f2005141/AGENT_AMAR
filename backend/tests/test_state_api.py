@@ -22,7 +22,12 @@ from app.services.gmail_service import GmailService
 from app.services.persistence_service import PersistenceService
 from app.services.token_store import InMemoryTokenStore
 from tests.fakes import FakeGmailResource
-from tests.persistence_helpers import decision_for, internship_email, promo_email
+from tests.persistence_helpers import (
+    decision_for,
+    default_user_pk,
+    internship_email,
+    promo_email,
+)
 
 client = TestClient(app)
 
@@ -40,7 +45,7 @@ def seeded():
     """Persist an internship email + a promo email straight into the DB."""
     out = {}
     with db_session.db_session() as db:
-        svc = PersistenceService(db)
+        svc = PersistenceService(db, user_pk=default_user_pk(db))
         intern = internship_email()
         promo = promo_email()
         out["intern"] = svc.persist_decision(intern, decision_for(intern)).email_id

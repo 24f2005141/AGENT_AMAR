@@ -1,5 +1,45 @@
 import 'agent_trace.dart';
 
+/// The ONE inbox bucket an email belongs to. The **backend** decides this
+/// (`primary_category` on every email) — Flutter must not re-derive it. The four
+/// values are mutually exclusive, so a section filtered on one never shows an
+/// email that belongs to another (in particular: a Reply Required email is never
+/// also Action Required).
+enum PrimaryCategory {
+  replyRequired,
+  actionRequired,
+  important,
+  lowPriority;
+
+  static PrimaryCategory fromWire(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'REPLY_REQUIRED':
+        return PrimaryCategory.replyRequired;
+      case 'ACTION_REQUIRED':
+        return PrimaryCategory.actionRequired;
+      case 'IMPORTANT':
+        return PrimaryCategory.important;
+      case 'LOW_PRIORITY':
+      default:
+        return PrimaryCategory.lowPriority;
+    }
+  }
+
+  /// The `?primary_category=` value the backend expects.
+  String get wire {
+    switch (this) {
+      case PrimaryCategory.replyRequired:
+        return 'REPLY_REQUIRED';
+      case PrimaryCategory.actionRequired:
+        return 'ACTION_REQUIRED';
+      case PrimaryCategory.important:
+        return 'IMPORTANT';
+      case PrimaryCategory.lowPriority:
+        return 'LOW_PRIORITY';
+    }
+  }
+}
+
 enum PriorityLevel {
   low,
   medium,

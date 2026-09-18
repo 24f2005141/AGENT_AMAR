@@ -18,10 +18,17 @@ from app.services import gmail_sync_service as sync_module
 from app.services.gmail_service import GmailService
 from app.services.gmail_sync_service import GmailSyncService
 from tests.fakes import FakeGmailResource, make_http_error, minimal_raw_message
+from tests.persistence_helpers import default_user_pk
 
 
 def _gmail(**kw) -> GmailService:
     return GmailService(service=FakeGmailResource(**kw))
+
+
+def _svc(db, **kw) -> GmailSyncService:
+    """A GmailSyncService bound to the conftest default test user."""
+    kw.setdefault("user_pk", default_user_pk(db))
+    return GmailSyncService(db, **kw)
 
 
 def _raw(mid: str) -> dict:
@@ -34,9 +41,9 @@ def _raw(mid: str) -> dict:
 
 def test_repo_get_or_create_is_singleton(db):
     repo = GmailSyncRepository(db)
-    a = repo.get_or_create()
+    a = repo.get_or_create(default_user_pk(db))
     db.commit()
-    b = repo.get_or_create()
+    b = repo.get_or_create(default_user_pk(db))
     assert a.id == b.id
     assert db.query(GmailSyncState).count() == 1
 
@@ -46,7 +53,7 @@ def test_repo_get_or_create_is_singleton(db):
 # ============================================================================
 
 def test_baseline_records_history_id_and_processes_nothing(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     gmail = _gmail(history_id="5000", email="me@gmail.com")
 
     state = svc.ensure_baseline(gmail)
@@ -58,7 +65,7 @@ def test_baseline_records_history_id_and_processes_nothing(db):
 
 
 def test_baseline_is_idempotent(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     first = svc.ensure_baseline(_gmail(history_id="100"))
     started = first.monitoring_started_at
     # a second call with a *different* mailbox historyId must not move the baseline
@@ -67,12 +74,40 @@ def test_baseline_is_idempotent(db):
     assert second.monitoring_started_at == started
 
 
+def test_baseline_force_reanchors_on_reconnect(db):
+    """Reconnecting Gmail (force=True) re-anchors the cursor to *now* so mail
+    that arrived while disconnected / an old stale cursor is never replayed."""
+    svc = _svc(db)
+    svc.ensure_baseline(_gmail(history_id="100"))
+    state = svc.ensure_baseline(_gmail(history_id="5000"), force=True)
+    assert state.last_history_id == "5000"
+    # still processes nothing
+    assert db.query(EmailRecord).count() == 0
+
+
+def test_old_unread_does_not_return_after_a_refresh_once_baselined(db):
+    """A message that predates the baseline is never ingested, no matter how
+    many times sync runs (pull-to-refresh)."""
+    svc = _svc(db)
+    svc.ensure_baseline(_gmail(history_id="500"))
+    # history only contains records at/below the baseline → nothing new
+    gmail = _gmail(
+        history_id="500",
+        history=[{"id": 400, "added_message_ids": ["old_1", "old_2"]}],
+        messages={"old_1": _raw("old_1"), "old_2": _raw("old_2")},
+    )
+    for _ in range(3):
+        result = svc.sync_new_messages(gmail)
+        assert result["processed"] == 0
+    assert db.query(EmailRecord).count() == 0
+
+
 # ============================================================================
 # incremental sync
 # ============================================================================
 
 def test_first_sync_baselines_and_processes_zero(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     result = svc.sync_new_messages(_gmail(history_id="200"))
     assert result["status"] == "baselined"
     assert result["processed"] == 0
@@ -81,7 +116,7 @@ def test_first_sync_baselines_and_processes_zero(db):
 
 
 def test_sync_processes_only_new_messages(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
 
     gmail = _gmail(
@@ -99,7 +134,7 @@ def test_sync_processes_only_new_messages(db):
 
 
 def test_sync_is_idempotent_no_duplicate_emails(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
     gmail = _gmail(
         history_id="120",
@@ -119,7 +154,7 @@ def test_sync_is_idempotent_no_duplicate_emails(db):
 
 
 def test_sync_skips_messages_that_are_no_longer_unread(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
     gmail = _gmail(
         history_id="130",
@@ -134,7 +169,7 @@ def test_sync_skips_messages_that_are_no_longer_unread(db):
 
 
 def test_sync_caps_at_max_messages(db):
-    svc = GmailSyncService(db, settings=Settings(gmail_sync_max_messages=2))
+    svc = _svc(db, settings=Settings(gmail_sync_max_messages=2))
     svc.ensure_baseline(_gmail(history_id="100"))
     ids = [f"m{i}" for i in range(5)]
     gmail = _gmail(
@@ -147,7 +182,7 @@ def test_sync_caps_at_max_messages(db):
 
 
 def test_history_expired_rebaselines(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
     gmail = _gmail(history_id="9000", history_error=make_http_error(404, "history id too old"))
     result = svc.sync_new_messages(gmail)
@@ -163,7 +198,7 @@ def test_list_added_raises_history_expired_on_404():
 
 
 def test_progress_not_advanced_when_history_call_fails(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
 
     boom = _gmail(history_id="150", history_error=make_http_error(503, "backend error"))
@@ -183,7 +218,7 @@ def test_progress_not_advanced_when_history_call_fails(db):
 
 
 def test_per_message_failure_does_not_stall_sync(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
     gmail = _gmail(
         history_id="120",
@@ -201,13 +236,13 @@ def test_per_message_failure_does_not_stall_sync(db):
 # ============================================================================
 
 def test_overlapping_sync_returns_skipped_locked(db):
-    svc = GmailSyncService(db)
+    svc = _svc(db)
     svc.ensure_baseline(_gmail(history_id="100"))
-    sync_module._SYNC_LOCK.acquire()
+    _lock = sync_module._lock_for(default_user_pk(db)); _lock.acquire()
     try:
         result = svc.sync_new_messages(_gmail(history_id="120"))
     finally:
-        sync_module._SYNC_LOCK.release()
+        _lock.release()
     assert result["status"] == "skipped_locked"
 
 
@@ -216,9 +251,9 @@ def test_overlapping_sync_returns_skipped_locked(db):
 # ============================================================================
 
 def test_state_survives_new_service_instance(db):
-    GmailSyncService(db).ensure_baseline(_gmail(history_id="777"))
+    _svc(db).ensure_baseline(_gmail(history_id="777"))
     # a fresh service (== a process restart) sees the persisted baseline
-    reborn = GmailSyncService(db)
+    reborn = _svc(db)
     state = reborn.get_state()
     assert state is not None and state.last_history_id == "777"
     # and does NOT re-baseline / re-ingest
@@ -234,21 +269,27 @@ def test_state_survives_new_service_instance(db):
 # scheduler cycle
 # ============================================================================
 
-def test_scheduler_gmail_cycle_skips_when_not_connected(monkeypatch):
+def test_scheduler_gmail_cycle_skips_when_not_connected(db, monkeypatch):
     from app.services.scheduler import MonitorScheduler
 
+    default_user_pk(db)  # a user exists, but their Gmail is "not connected"
     sch = MonitorScheduler(Settings(scheduler_enabled=True, gmail_sync_enabled=True))
     monkeypatch.setattr(
         "app.services.gmail_auth_service.GmailAuthService.get_credentials",
         lambda self, *a, **k: None,
     )
+    called = []
+    monkeypatch.setattr(GmailSyncService, "sync_new_messages",
+                        lambda self, *a, **k: called.append(1))
     sch._gmail_cycle()          # must not raise
-    assert sch.cycles["gmail"] == 0
+    assert called == []          # no user synced
+    assert sch._connected_users == 0
 
 
-def test_scheduler_gmail_cycle_runs_sync_when_connected(monkeypatch):
+def test_scheduler_gmail_cycle_runs_sync_when_connected(db, monkeypatch):
     from app.services.scheduler import MonitorScheduler
 
+    default_user_pk(db)
     calls: dict = {}
     monkeypatch.setattr(
         "app.services.gmail_auth_service.GmailAuthService.get_credentials",
@@ -267,6 +308,7 @@ def test_scheduler_gmail_cycle_runs_sync_when_connected(monkeypatch):
     assert calls["gmail_type"] == "GmailService"   # the scheduler builds one and delegates
     assert sch.cycles["gmail"] == 1
     assert sch.last_gmail_sync is not None
+    assert sch._connected_users == 1
 
 
 # ============================================================================

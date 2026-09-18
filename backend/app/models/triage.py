@@ -46,6 +46,8 @@ class ImportanceEstimate(str, Enum):
 
 class ClassificationMethod(str, Enum):
     DETERMINISTIC = "deterministic"
+    #: Local scikit-learn model answered — the LLM call was avoided.
+    ML = "ml"
     LLM = "llm"
     LLM_FALLBACK_DETERMINISTIC = "llm_fallback_deterministic"
 
@@ -108,6 +110,9 @@ class TriageSignals(BaseModel):
     category_scores: dict[str, float] = Field(default_factory=dict)
     precedence_applied: list[str] = Field(default_factory=list)
     conflicting_signals: bool = False
+    #: How this email was routed through deterministic -> local ML -> LLM.
+    #: Metadata only (method, confidences, reject reason) — never email content.
+    classification_routing: dict = Field(default_factory=dict)
 
 
 class TriageData(BaseModel):

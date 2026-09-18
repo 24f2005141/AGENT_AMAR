@@ -48,21 +48,33 @@ class CountdownTimerView extends StatelessWidget {
           color: color,
         ),
         const SizedBox(width: 4),
-        Text(
-          formatted,
-          style: AppTheme.countdown(
-            fontSize: isLarge ? 15 : 12,
-            color: color,
+        // The countdown string plus the LEFT suffix can exceed a narrow card
+        // at large font scales; let the value shrink before the row breaks.
+        Flexible(
+          child: Text(
+            formatted,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: AppTheme.countdown(
+              fontSize: isLarge ? 15 : 12,
+              color: color,
+            ),
           ),
         ),
         if (showLabel) ...[
           const SizedBox(width: 4),
-          Text(
-            'LEFT',
-            style: AppTheme.mono(
+          Flexible(
+            child: Text(
+              'LEFT',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: AppTheme.mono(
               fontSize: isLarge ? 11 : 9,
-              color: color.withValues(alpha: 0.8),
-              fontWeight: FontWeight.bold,
+                color: color.withValues(alpha: 0.8),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

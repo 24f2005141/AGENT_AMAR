@@ -18,6 +18,7 @@ class MockData {
       // Scenario 1 & 5: Critical Placement Application (Dominant item)
       Email(
         id: 'email_tcs_01',
+        primaryCategory: PrimaryCategory.actionRequired,
         senderName: 'Placement Cell',
         senderEmail: 'placements@university.edu.in',
         subject: 'TCS Internship Application - Action Required',
@@ -114,6 +115,7 @@ University Career Development Cell''',
       // Scenario 2: Robotics Assignment Submission (High Priority)
       Email(
         id: 'email_robotics_02',
+        primaryCategory: PrimaryCategory.actionRequired,
         senderName: 'Prof. Sharma',
         senderEmail: 'sharma.robotics@university.edu.in',
         subject: 'Robotics Assignment 3 - Kinematics Code Submission',
@@ -192,6 +194,7 @@ Department of Mechanical & Robotics Engineering''',
       // Scenario 3: Faculty Announcement (Medium Priority, No Action)
       Email(
         id: 'email_faculty_03',
+        primaryCategory: PrimaryCategory.lowPriority,
         senderName: 'Prof. K. Rao',
         senderEmail: 'dean.academics@university.edu.in',
         subject: 'Revised Mid-Semester Examination Timetable - Autumn 2026',
@@ -236,6 +239,7 @@ University Academic Council''',
       // Scenario 6: Hackathon Registration (Medium Priority, Action Required)
       Email(
         id: 'email_acm_04',
+        primaryCategory: PrimaryCategory.replyRequired,
         senderName: 'ACM Student Chapter',
         senderEmail: 'acm.core@university.edu.in',
         subject: 'ACM National Hackathon 2026 - Team Roster Confirmation',
@@ -273,6 +277,7 @@ ACM Organizing Committee''',
       // Scenario 4: Promotional Newsletter (Low Priority, Visually Muted)
       Email(
         id: 'email_promo_05',
+        primaryCategory: PrimaryCategory.lowPriority,
         senderName: 'Campus Perks & Coursera',
         senderEmail: 'newsletter@campusperks.io',
         subject: 'Flash 50% Off: Master Generative AI & Cloud Architecture',

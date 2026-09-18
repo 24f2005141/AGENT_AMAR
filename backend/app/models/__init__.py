@@ -23,6 +23,7 @@ from app.models.decision import (
     ConflictResolution,
     DecisionAction,
     FinalDecision,
+    PrimaryCategory,
     RoutingDecision,
     TraceEntry,
 )
@@ -72,6 +73,7 @@ __all__ = [
     "ConflictResolution",
     "DecisionAction",
     "FinalDecision",
+    "PrimaryCategory",
     "RoutingDecision",
     "TraceEntry",
 ]

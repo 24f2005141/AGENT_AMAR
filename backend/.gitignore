@@ -12,6 +12,11 @@ client_secret*.json
 *.sqlite
 *.sqlite3
 
+# Local ML pre-classifier — build artifacts + your private training data.
+# The bundled starter set (email_training_data.sample.jsonl) IS tracked.
+data/models/
+data/training/email_training_data.jsonl
+
 # Python
 __pycache__/
 *.py[cod]

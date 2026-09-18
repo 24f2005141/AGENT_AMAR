@@ -18,7 +18,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_deadline_monitor_service, get_reminder_service
+from app.api.deps import (
+    get_current_user,
+    get_db,
+    get_deadline_monitor_service,
+    get_reminder_service,
+)
+from app.db.models import User
 from app.models.monitoring import (
     MonitorCheckRequest,
     MonitorCheckResult,
@@ -28,6 +34,7 @@ from app.models.monitoring import (
     ReminderOut,
 )
 from app.repositories import NotificationRepository, ReminderRepository
+from app.ml.metrics import get_classification_metrics
 from app.services.deadline_monitor_service import DeadlineMonitorService
 from app.services.reminder_service import ReminderService, ReminderValidationError
 from app.services.scheduler import get_scheduler
@@ -41,6 +48,7 @@ router = APIRouter(prefix="/api/v1", tags=["monitoring"])
 def run_deadline_check(
     body: MonitorCheckRequest | None = None,
     monitor: DeadlineMonitorService = Depends(get_deadline_monitor_service),
+    _user: User = Depends(get_current_user),
 ) -> MonitorCheckResult:
     now = body.now if body is not None else None
     result = monitor.run_deadline_check(now)
@@ -58,9 +66,14 @@ def monitor_status() -> dict:
     """Background scheduler state (Phase 11B.1). Read-only, no auth.
 
     ``scheduler`` is ``"running"`` / ``"stopped"``; ``last_*_check`` are ISO
-    8601 UTC or ``null`` before the first cycle.
+    8601 UTC or ``null`` before the first cycle. ``classification`` (additive)
+    holds in-process triage routing counters — metadata only, no email content,
+    reset on restart.
     """
-    return get_scheduler().status()
+    return {
+        **get_scheduler().status(),
+        "classification": get_classification_metrics().snapshot(),
+    }
 
 
 # --- user-scheduled reminders --------------------------------------
@@ -74,6 +87,7 @@ def create_reminder(
     email_id: str,
     body: ReminderCreate,
     svc: ReminderService = Depends(get_reminder_service),
+    _user: User = Depends(get_current_user),
 ) -> ReminderOut:
     try:
         reminder = svc.create(
@@ -92,9 +106,12 @@ def list_all_reminders(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> list[ReminderOut]:
-    """Every reminder across all emails (frontend Reminders screen)."""
-    rows = ReminderRepository(db).list_all(status=status, limit=limit, offset=offset)
+    """Every reminder across the current user's emails (Reminders screen)."""
+    rows = ReminderRepository(db).list_all(
+        user_pk=user.id, status=status, limit=limit, offset=offset
+    )
     return [_reminder_out(r, eid) for r, eid in rows]
 
 
@@ -102,6 +119,7 @@ def list_all_reminders(
 def list_reminders(
     email_id: str,
     svc: ReminderService = Depends(get_reminder_service),
+    _user: User = Depends(get_current_user),
 ) -> list[ReminderOut]:
     reminders = svc.list_for_email(email_id)
     if reminders is None:
@@ -114,6 +132,7 @@ def cancel_reminder(
     email_id: str,
     reminder_id: int,
     svc: ReminderService = Depends(get_reminder_service),
+    _user: User = Depends(get_current_user),
 ) -> ReminderOut:
     reminder = svc.cancel(email_id, reminder_id)
     if reminder is None:
@@ -140,8 +159,10 @@ def list_notifications(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> list[NotificationOut]:
     rows = NotificationRepository(db).list(
+        user_pk=user.id,
         status=status,
         severity=severity,
         notification_type=type,
@@ -158,8 +179,9 @@ def list_notifications(
 def get_notification(
     notification_id: int,
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> NotificationOut:
-    note = NotificationRepository(db).get(notification_id)
+    note = NotificationRepository(db).get(notification_id, user_pk=user.id)
     if note is None:
         raise HTTPException(status_code=404, detail="notification not found")
     return _to_out(note)

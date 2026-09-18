@@ -49,6 +49,14 @@ class _MessagesResource:
             return _Execable(result=self._fake.messages[id])
         return _Execable(error=make_http_error(404, "Not Found"))
 
+    def send(self, userId: str = "me", body: dict | None = None, **_: Any) -> _Execable:
+        self._fake.calls.append(("messages.send", {"body": body}))
+        self._fake.sent.append(body or {})
+        if self._fake.send_error is not None:
+            return _Execable(error=self._fake.send_error)
+        thread_id = (body or {}).get("threadId") or "t_sent"
+        return _Execable(result={"id": f"sent_{len(self._fake.sent)}", "threadId": thread_id})
+
 
 class _HistoryResource:
     def __init__(self, fake: "FakeGmailResource") -> None:
@@ -76,15 +84,24 @@ class _HistoryResource:
             if str(entry["id"]) <= start:
                 continue
             labels = entry.get("labels", ["INBOX", "UNREAD"])
-            records.append(
-                {
-                    "id": str(entry["id"]),
-                    "messagesAdded": [
-                        {"message": {"id": mid, "threadId": mid, "labelIds": labels}}
-                        for mid in entry.get("added_message_ids", [])
-                    ],
-                }
-            )
+            record: dict[str, Any] = {
+                "id": str(entry["id"]),
+                "messagesAdded": [
+                    {"message": {"id": mid, "threadId": mid, "labelIds": labels}}
+                    for mid in entry.get("added_message_ids", [])
+                ],
+            }
+            if entry.get("labels_added"):
+                record["labelsAdded"] = [
+                    {"message": {"id": item["message_id"]}, "labelIds": item["label_ids"]}
+                    for item in entry["labels_added"]
+                ]
+            if entry.get("labels_removed"):
+                record["labelsRemoved"] = [
+                    {"message": {"id": item["message_id"]}, "labelIds": item["label_ids"]}
+                    for item in entry["labels_removed"]
+                ]
+            records.append(record)
         out: dict[str, Any] = {"historyId": str(self._fake.history_id)}
         if records:
             out["history"] = records
@@ -124,6 +141,7 @@ class FakeGmailResource:
         history: list[dict] | None = None,
         history_error: Exception | None = None,
         messages_total: int = 0,
+        send_error: Exception | None = None,
     ) -> None:
         self.unread_ids = list(unread_ids)
         self.messages = messages or {}
@@ -134,32 +152,48 @@ class FakeGmailResource:
         self.history: list[dict] = history or []
         self.history_error = history_error
         self.messages_total = messages_total
+        # messages.send capture (reply feature)
+        self.send_error = send_error
+        self.sent: list[dict] = []
         self.calls: list[tuple[str, dict]] = []
 
     def users(self) -> _UsersResource:
         return _UsersResource(self)
 
 
-def minimal_raw_message(msg_id: str, subject: str = "Hello", body: str = "Hi there team.") -> dict:
+def minimal_raw_message(
+    msg_id: str,
+    subject: str = "Hello",
+    body: str = "Hi there team.",
+    *,
+    thread_id: str | None = None,
+    references: str | None = None,
+    reply_to: str | None = None,
+) -> dict:
     """A tiny but valid raw Gmail message resource (single text/plain part)."""
     import base64
 
     data = base64.urlsafe_b64encode(body.encode()).decode().rstrip("=")
+    headers = [
+        {"name": "From", "value": f"Sender {msg_id} <sender.{msg_id}@example.com>"},
+        {"name": "To", "value": "me@example.com"},
+        {"name": "Subject", "value": subject},
+        {"name": "Date", "value": "Thu, 28 Aug 2026 09:14:22 +0530"},
+        {"name": "Message-ID", "value": f"<{msg_id}@example.com>"},
+    ]
+    if references:
+        headers.append({"name": "References", "value": references})
+    if reply_to:
+        headers.append({"name": "Reply-To", "value": reply_to})
     return {
         "id": msg_id,
-        "threadId": msg_id,
+        "threadId": thread_id or msg_id,
         "labelIds": ["INBOX", "UNREAD"],
         "snippet": body[:50],
         "internalDate": "1787888662000",
         "payload": {
             "mimeType": "text/plain",
-            "headers": [
-                {"name": "From", "value": f"Sender {msg_id} <sender.{msg_id}@example.com>"},
-                {"name": "To", "value": "me@example.com"},
-                {"name": "Subject", "value": subject},
-                {"name": "Date", "value": "Thu, 28 Aug 2026 09:14:22 +0530"},
-                {"name": "Message-ID", "value": f"<{msg_id}@example.com>"},
-            ],
+            "headers": headers,
             "body": {"size": len(body), "data": data},
         },
     }

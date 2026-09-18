@@ -31,7 +31,12 @@ class ReminderRepository:
         return list(self.session.execute(stmt).scalars().all())
 
     def list_all(
-        self, *, status: str | None = None, limit: int = 100, offset: int = 0
+        self,
+        *,
+        user_pk: int | None = None,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[tuple[ReminderRecord, str]]:
         """Every reminder + its email_id, newest scheduled first. Frontend
         Reminders screen (there is no per-email context here)."""
@@ -40,12 +45,16 @@ class ReminderRepository:
             .join(EmailRecord, ReminderRecord.email_pk == EmailRecord.id)
             .order_by(ReminderRecord.reminder_at.desc(), ReminderRecord.id.desc())
         )
+        if user_pk is not None:
+            stmt = stmt.where(EmailRecord.user_pk == user_pk)
         if status is not None:
             stmt = stmt.where(ReminderRecord.status == status.upper())
         stmt = stmt.limit(max(1, min(limit, 500))).offset(max(0, offset))
         return [tuple(row) for row in self.session.execute(stmt).all()]
 
-    def list_due(self, now: datetime, *, limit: int = 200) -> list[ReminderRecord]:
+    def list_due(
+        self, now: datetime, *, user_pk: int | None = None, limit: int = 200
+    ) -> list[ReminderRecord]:
         """PENDING reminders whose time has arrived."""
         stmt = (
             select(ReminderRecord)
@@ -56,4 +65,8 @@ class ReminderRepository:
             .order_by(ReminderRecord.reminder_at)
             .limit(limit)
         )
+        if user_pk is not None:
+            stmt = stmt.join(EmailRecord, ReminderRecord.email_pk == EmailRecord.id).where(
+                EmailRecord.user_pk == user_pk
+            )
         return list(self.session.execute(stmt).scalars().all())

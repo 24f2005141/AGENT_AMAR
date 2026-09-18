@@ -4,7 +4,12 @@ No business logic here — that lives in ``app/services/persistence_service.py``
 """
 
 from app.repositories.action_repository import ActionRepository
+from app.repositories.audit_repository import AuditRepository
+from app.repositories.classification_feedback_repository import (
+    ClassificationFeedbackRepository,
+)
 from app.repositories.deadline_repository import DeadlineRepository
+from app.repositories.device_repository import DeviceRepository
 from app.repositories.email_repository import EmailRepository
 from app.repositories.gmail_sync_repository import GmailSyncRepository
 from app.repositories.notification_repository import NotificationRepository
@@ -13,7 +18,10 @@ from app.repositories.reminder_repository import ReminderRepository
 
 __all__ = [
     "ActionRepository",
+    "AuditRepository",
+    "ClassificationFeedbackRepository",
     "DeadlineRepository",
+    "DeviceRepository",
     "EmailRepository",
     "GmailSyncRepository",
     "NotificationRepository",

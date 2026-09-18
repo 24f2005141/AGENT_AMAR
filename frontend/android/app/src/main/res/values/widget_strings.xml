@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_brand">Sorted</string>
+    <string name="widget_focus_now">FOCUS NOW</string>
+    <string name="widget_next_deadline">NEXT DEADLINE</string>
+    <string name="widget_view">View</string>
+    <string name="widget_done">Done</string>
+    <string name="widget_actions">Actions</string>
+    <string name="widget_replies">Replies</string>
+    <string name="widget_deadlines">Deadlines</string>
+    <string name="widget_inbox">Inbox</string>
+    <string name="widget_empty_title">✓ You\'re Sorted</string>
+    <string name="widget_empty_body">Nothing needs your attention.</string>
+    <string name="widget_no_deadlines">✓ No deadlines</string>
+    <string name="widget_no_deadlines_body">Nothing due right now.</string>
+
+    <!-- Widget picker entries -->
+    <string name="widget_focus_label">Sorted · Focus Now</string>
+    <string name="widget_focus_description">The one thing that needs your attention.</string>
+    <string name="widget_dashboard_label">Sorted · Attention Dashboard</string>
+    <string name="widget_dashboard_description">Actions, replies and deadlines at a glance.</string>
+    <string name="widget_deadline_label">Sorted · Deadline Countdown</string>
+    <string name="widget_deadline_description">Time left until your next deadline.</string>
+    <string name="widget_quick_label">Sorted · Quick Actions</string>
+    <string name="widget_quick_description">Jump straight into a Sorted view.</string>
+</resources>

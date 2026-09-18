@@ -14,7 +14,7 @@ from app.agents.intake_agent import MailIntakeAgent
 from app.agents.triage_agent import TriageAgent
 from app.core.errors import GmailIntegrationError, MessageNotFoundError
 from app.models.email import NormalizedEmail
-from app.services.gmail_service import GmailService
+from app.services.gmail_service import GmailService, is_spam_message
 
 
 def fetch_unread_triaged(
@@ -35,6 +35,9 @@ def fetch_unread_triaged(
             raw = gmail.get_message(message_id)
         except (GmailIntegrationError, MessageNotFoundError) as exc:
             errors.append({"message_id": message_id, "error": exc.public_message})
+            continue
+        if is_spam_message(raw):
+            # Gmail's own SPAM label — never normalized, classified, or surfaced.
             continue
 
         intake_output = intake.run(raw)

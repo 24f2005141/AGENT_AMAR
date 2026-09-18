@@ -160,7 +160,7 @@ void main() {
 
     test('"baselined" is not an error and does not flood historical mail', () async {
       repo.nextResult = const GmailSyncResultDto(status: 'baselined', processed: 0);
-      final before = (await repo.getEmails()).length;
+      final before = (await repo.getEmails(active: true)).length;
 
       await controller.refreshInbox();
 

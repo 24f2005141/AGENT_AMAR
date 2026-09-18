@@ -17,6 +17,9 @@ from app.agents.amar_orchestrator import AMAROrchestrator
 from app.agents.deadline_agent import DeadlineAgent
 from app.agents.priority_agent import PriorityAgent
 from app.agents.triage_agent import TriageAgent
+import os
+from datetime import datetime, timedelta
+
 from app.api.deps import get_amar_orchestrator, get_gmail_service
 from app.core.config import Settings
 from app.main import app
@@ -25,15 +28,22 @@ from tests.fakes import FakeGmailResource
 
 client = TestClient(app)
 
+# The deadline must always be in the FUTURE relative to the run, or
+# /deadlines/upcoming legitimately returns nothing and this contract test
+# starts failing on a calendar date rather than on a code change. (It was
+# previously hardcoded to "5 September 2026" and duly broke on 6 Sep 2026.)
+_DEADLINE_AT = datetime.now() + timedelta(days=30)
+_DEADLINE_TEXT = _DEADLINE_AT.strftime("%-d %B %Y") if os.name != "nt"     else _DEADLINE_AT.strftime("%#d %B %Y")
+
 _BODY = (
     "Please submit the application form https://forms.gle/abc and upload your "
-    "resume by 5 September 2026, 6:00 PM. This opportunity is important."
+    f"resume by {_DEADLINE_TEXT}, 6:00 PM. This opportunity is important."
 )
 _RAW = {
     "id": "contract1",
     "threadId": "contract1",
     "labelIds": ["INBOX", "UNREAD"],
-    "snippet": "Please submit the application form and upload your resume by 5 September 2026",
+    "snippet": f"Please submit the application form and upload your resume by {_DEADLINE_TEXT}",
     "internalDate": "1725000000000",
     "payload": {
         "mimeType": "text/plain",

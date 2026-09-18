@@ -1,5 +1,45 @@
 # AGENT AMAR — Backend
 
+**Phase 16 — real background push.** The backend pushes through **Firebase Cloud
+Messaging** so a user is notified even when the Flutter app is closed / swiped
+away / terminated. `flutter_local_notifications` is kept for foreground display,
+local reminders, the alarm dialog and tap handling — the two layers work
+together. New `device_registrations` table (per-user FCM tokens), `PushNotification
+Service` + `dispatch_unpushed()` fired after the agents create a `notifications`
+row (`pushed_at` = pushed once, never re-notified), `/api/v1/devices/*` endpoints.
+Push payloads carry **only ids** — never OTPs/tokens/email content. Disabled or
+unconfigured ⇒ the pipeline runs unchanged, push is skipped. See
+[`../docs/PUSH_NOTIFICATIONS.md`](../docs/PUSH_NOTIFICATIONS.md).
+
+**Phase 15 — multi-user.** "Continue with Google" login, an application `User`
+keyed by the stable Google `sub`, an opaque **bearer session token**, and
+**per-user isolation** of every email / reminder / notification / deadline /
+Gmail credential / sync-state row. Each user's Gmail OAuth blob is stored
+encrypted in `oauth_credentials`; the scheduler iterates connected users. Every
+`/api/v1/*` data route requires `Authorization: Bearer <token>`. See
+[`../docs/API_CONTRACT.md`](../docs/API_CONTRACT.md) §0 and
+[`../docs/MIGRATION_MULTIUSER.md`](../docs/MIGRATION_MULTIUSER.md).
+
+**Phase 14.** The full pipeline + persistent state + automatic monitoring +
+incremental Gmail sync, now with **data-at-rest encryption, secret
+minimisation, and a tamper-evident audit chain**:
+
+```
+Gmail → Mail Intake → sensitive-data sanitisation → agents
+                                                      ↓
+                        AES-256-GCM encrypted persistence (subject/snippet/
+                        sender/action & deadline text/reminder note/notif detail)
+                                                      ↓
+                        SHA-256 hash-chained audit ledger (non-sensitive metadata)
+```
+
+Encryption is **transparent** (agents + API responses see plaintext; only the DB
+bytes are ciphertext) and **backward compatible** (legacy plaintext rows read
+fine). Raw OTPs / tokens / passwords never reach logs, notifications, exceptions
+or the audit chain. See [`../docs/SECURITY.md`](../docs/SECURITY.md).
+
+---
+
 **Phase 12.** The full pipeline + persistent state + automatic monitoring +
 **incremental Gmail sync** (no more re-processing the whole unread inbox):
 
@@ -104,13 +144,13 @@ backend/
 │   │   └── routes_gmail.py            /api/v1/gmail/unread[/triage]
 │   ├── agents/
 │   │   ├── intake_agent.py            Mail Intake Agent (deterministic)
-│   │   ├── triage_agent.py + triage_rules.py    Triage Agent (deterministic + LLM)
+│   │   ├── triage_agent.py + triage_rules.py    Triage Agent (deterministic + local ML + LLM)
 │   │   ├── action_agent.py + action_rules.py    Action Agent (deterministic + LLM)
 │   │   ├── deadline_agent.py          Deadline Agent (deterministic + LLM)
 │   │   ├── priority_agent.py          Priority Agent (deterministic + bounded LLM)
 │   │   └── amar_orchestrator.py       AMAR Orchestrator (deterministic coordinator)
-│   ├── db/                            Base + TZDateTime, session/engine, ORM models  (Phase 9/10)
-│   ├── repositories/                  one repo per aggregate (email/action/deadline/reminder/notification)
+│   ├── db/                            Base + TZDateTime + EncryptedString, session/engine, ORM models
+│   ├── repositories/                  one repo per aggregate (email/action/deadline/reminder/notification/audit)
 │   ├── models/                        Pydantic: NormalizedEmail, AgentOutput, …, FinalDecision, persistence + monitoring DTOs
 │   ├── services/
 │   │   ├── gmail_auth_service.py      OAuth flow + credential lifecycle
@@ -122,12 +162,18 @@ backend/
 │   │   ├── reminder_service.py        user-scheduled reminders (≠ snooze)  (Phase 10)
 │   │   ├── scheduler.py              in-process asyncio scheduler → monitor + gmail sync  (Phase 11B.1 / 12)
 │   │   ├── gmail_sync_service.py     incremental Gmail sync + persistent baseline  (Phase 12)
+│   │   ├── audit_service.py          tamper-evident hash-chained audit ledger  (Phase 14)
 │   │   ├── priority_context.py        memory adapter (senders + user prefs; DB-swappable)
 │   │   ├── llm_service.py             provider-agnostic LLM abstraction (none/openai/anthropic/gemini/ollama)
 │   │   └── token_store.py             TokenStore ABC + File/InMemory impls
-│   ├── core/  {config.py, errors.py}
-│   └── utils/ {text_cleaning, deadline_parsing, priority_scoring}
-└── tests/                             518 tests, no network, LLM + OAuth mocked, temp SQLite (scheduler off)
+│   ├── core/  {config, errors, crypto (AES-256-GCM), sanitization, logging_setup}  (Phase 14)
+│   ├── utils/ {text_cleaning, deadline_parsing, priority_scoring}
+│   ├── ml/    {email_classifier, training, train, evaluate, metrics}   local TF-IDF+LogReg pre-classifier + routing observability (CPU, optional)
+│   ├── services/  {auth_session_service, google_identity, token_store.DbTokenStore}  (Phase 15)
+│   └── services/  {fcm_client, push_service}   Firebase Cloud Messaging dispatch  (Phase 16)
+├── data/training/email_training_data.sample.jsonl   starter training set (dev/testing only)
+├── data/eval/email_eval_dataset.jsonl               synthetic evaluation set (dev/testing only)
+└── tests/                             669 tests, no network, LLM + OAuth + FCM + ML mocked, temp SQLite (scheduler/encryption/push/ML off)
 ```
 
 ---
@@ -181,8 +227,10 @@ changing the models — the constraint naming convention is already in place.
    - App name: `AGENT AMAR`
    - User support email: your email
    - Developer contact email: your email
-4. **Scopes** page → **Add or remove scopes** → filter for `gmail.readonly`
-   → select `.../auth/gmail.readonly` → **Update** → **Save and continue**.
+4. **Scopes** page → **Add or remove scopes** → add both Gmail scopes:
+   `.../auth/gmail.readonly` (read message bodies) and `.../auth/gmail.send`
+   (send a user-approved AI reply — cannot read/modify/delete mail) →
+   **Update** → **Save and continue**.
 5. **Test users** page → **Add users** → add the Gmail address you will connect
    (while the app is in "Testing", only listed test users can authorize it).
 6. **Save and continue** → **Back to dashboard**. Leave publishing status as
@@ -193,11 +241,17 @@ changing the models — the constraint naming convention is already in place.
 1. **APIs & Services → Credentials → Create Credentials → OAuth client ID**.
 2. Application type: **Web application**.
 3. Name: `agent-amar-backend`.
-4. **Authorized redirect URIs → Add URI**:
+4. **Authorized redirect URIs → Add URI** — must match the *effective* redirect
+   URI (`Settings.google_redirect_uri_resolved`) exactly:
    ```
-   http://localhost:8000/api/v1/auth/google/callback
+   http://localhost:8000/api/v1/auth/google/callback         # desktop / co-located dev
+   https://<your-fastapi-tunnel-domain>/api/v1/auth/google/callback   # phone/tablet — HTTPS required
    ```
-   (must match `GOOGLE_REDIRECT_URI` exactly).
+   (add both if you test both ways). See [`docs/OAUTH_TUNNEL_TESTING.md`](../docs/OAUTH_TUNNEL_TESTING.md).
+   > Only the **backend HTTPS callback** is registered with Google. The app's
+   > deep link (`agentamar://auth/callback`, `APP_AUTH_CALLBACK_URL`) is where the
+   > backend 302s the browser *afterwards* — never add a custom scheme as a
+   > Google redirect URI.
 5. **Create**. Copy the **Client ID** and **Client secret**.
 
 ### 5. Put the credentials in `.env`
@@ -212,9 +266,13 @@ Edit `backend/.env`:
 APP_ENV=development
 APP_NAME=AGENT_AMAR
 
+# The backend's public origin. GOOGLE_REDIRECT_URI is derived from it when blank
+# ({API_PUBLIC_BASE_URL}/api/v1/auth/google/callback). Separate from OLLAMA_BASE_URL.
+API_PUBLIC_BASE_URL=            # blank => http://localhost:8000 ; or https://<tunnel>
+
 GOOGLE_CLIENT_ID=1234567890-abcdef.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-your-secret
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/auth/google/callback
+GOOGLE_REDIRECT_URI=           # blank => derived from API_PUBLIC_BASE_URL
 GOOGLE_TOKEN_STORAGE_PATH=.tokens
 ```
 
@@ -234,17 +292,26 @@ Open in a browser:
 http://localhost:8000/api/v1/auth/google/login
 ```
 
-You are redirected to Google's consent screen. Approve the read-only Gmail
-permission. Google redirects back to `/api/v1/auth/google/callback`, which
-stores the credentials and returns:
+You are redirected to Google's consent screen. Approve the Gmail permissions
+(read message bodies + send a user-approved reply). Google redirects back to
+`/api/v1/auth/google/callback`, which stores the credentials and returns:
 
 ```json
 { "status": "connected", "connected": true, "provider": "gmail",
-  "account_email": "you@gmail.com", "scopes": ["https://www.googleapis.com/auth/gmail.readonly"] }
+  "account_email": "you@gmail.com",
+  "scopes": ["https://www.googleapis.com/auth/gmail.readonly",
+             "https://www.googleapis.com/auth/gmail.send"] }
 ```
 
 > `http://localhost` redirects work because `APP_ENV=development` sets
 > `OAUTHLIB_INSECURE_TRANSPORT` for you. Use HTTPS in production.
+>
+> **Testing "Continue with Google" from a phone / tablet on the LAN?** Google
+> rejects `http://` redirect URIs for non-`localhost` hosts, so the consent
+> redirect must reach the backend over HTTPS. See
+> [`docs/OAUTH_TUNNEL_TESTING.md`](../docs/OAUTH_TUNNEL_TESTING.md) for the
+> cloudflared walkthrough — only `GOOGLE_REDIRECT_URI` changes; the app keeps
+> talking to the backend over the LAN.
 
 ### 8. Check connection status
 
@@ -312,8 +379,98 @@ curl "http://localhost:8000/api/v1/gmail/unread/triage?max_results=5"
 }
 ```
 
-`classification_method` is `deterministic`, `llm`, or `llm_fallback_deterministic`.
-With `LLM_PROVIDER=none` (the default) it is always `deterministic`.
+`classification_method` is `deterministic`, `ml` (local model — see
+[Hybrid AI classification](#hybrid-ai-classification)), `llm`, or
+`llm_fallback_deterministic`. With `LLM_PROVIDER=none` and no trained ML model
+(the defaults) it is always `deterministic`.
+
+### Hybrid AI classification
+
+The Triage Agent classifies in up to three layers, stopping as soon as one is
+confident:
+
+```
+            Incoming email
+                  │
+                  ▼
+        1. Deterministic rules        keyword / sender / structure scoring
+                  │
+        confident ─┴─ uncertain
+                  │        │
+                  │        ▼
+                  │  2. Local ML classifier   TF-IDF + LogisticRegression, on CPU
+                  │        │
+                  │  confident ─┴─ uncertain / conflicts with a strong
+                  │        │       deterministic signal
+                  │        │             │
+                  │        │             ▼
+                  │        │      3. LLM   (Gemini · OpenAI · Anthropic · Ollama · none)
+                  ▼        ▼             ▼
+                       Final classification
+```
+
+The **local ML model**:
+
+* runs entirely on CPU, needs **no API key**, makes **no network calls**;
+* predicts the *existing* 15 `TriageCategory` labels — it adds nothing to the API;
+* is only consulted when the deterministic layer is unsure, and its answer is
+  used **only** when its top-class probability ≥ `ML_CLASSIFIER_THRESHOLD` *and*
+  it does not contradict a strong deterministic signal (phishing, the
+  college-domain guard, an explicit deadline + task, …);
+* **reduces LLM calls** — a confident local prediction skips the LLM entirely;
+* is **optional**: with no trained model file the agent behaves exactly as
+  before (`deterministic → LLM fallback`). A corrupt / stale model file is
+  ignored the same way (logged once, never fatal).
+
+Supported LLM providers for layer 3 (`LLM_PROVIDER`): `gemini`, `openai`,
+`anthropic`, `ollama`, `none`.
+
+#### Training the local model
+
+Training is explicit and offline — it never runs at application startup.
+
+```bash
+cd backend
+
+# quick start: bundled hand-written starter dataset (dev / testing only)
+python -m app.ml.train --sample
+
+# real use: your own labelled data
+#   backend/data/training/email_training_data.jsonl   (git-ignored)
+#   one JSON object per line: {"subject","body","sender","label"}   label ∈ TriageCategory
+python -m app.ml.train
+```
+
+This writes `data/models/email_classifier.joblib` +
+`email_classifier_metadata.json` (both git-ignored). Enable / disable and tune
+the gate in `.env`:
+
+| var | default | meaning |
+|---|---|---|
+| `ML_CLASSIFIER_ENABLED` | `true` | `false` ⇒ ML layer skipped entirely (no file access) |
+| `ML_CLASSIFIER_THRESHOLD` | `0.85` | use the local model only at / above this probability |
+| `ML_CLASSIFIER_MODEL_PATH` | `data/models/email_classifier.joblib` | relative to `backend/` |
+
+#### Evaluating the routing (observability)
+
+```bash
+python -m app.ml.evaluate            # text report + threshold trade-off table
+python -m app.ml.evaluate --json     # machine-readable
+python -m app.ml.evaluate --threshold 0.75
+```
+
+Runs the bundled synthetic dataset (`data/eval/email_eval_dataset.jsonl`, ~58
+clear / ambiguous / conflicting / safety-critical emails) through the **real**
+`TriageAgent` with a fake LLM that only records whether it *would* have been
+called — no network, no API keys. Reports the deterministic / ML / LLM routing
+split, accuracy, `ml_safety_violations` (must be `0`), and how the ML threshold
+trades LLM-call reduction against ML precision.
+
+A running server also exposes live routing counters (metadata only, no email
+content) additively at `GET /api/v1/monitor/status` → `classification`, and every
+triage result carries a `signals.classification_routing` trace
+(`method`, `deterministic_confidence`, `ml_confidence`, `ml_reject_reason`,
+`llm_invoked`).
 
 ### 11. Detect required actions (Action Agent)
 
@@ -424,6 +581,7 @@ is evaluated independently — it never blocks alarm escalation.
 |---|---|---|
 | POST | `/api/v1/monitor/deadlines/check` | run the monitor **manually**; body `{ "now": "<ISO>" }` optional (testing/replay) |
 | GET | `/api/v1/monitor/status` | background scheduler status (Phase 11B.1) |
+| GET | `/api/v1/system/status` | backend + configured-LLM connection status (open; no LLM inference / tokens) |
 | POST | `/api/v1/emails/{email_id}/reminders` | create a reminder — `{ "reminder_at": "<ISO>", "action_ref"?, "note"? }` |
 | GET | `/api/v1/emails/{email_id}/reminders` | this email's reminders |
 | GET | `/api/v1/reminders` | all reminders (filter `status`) |
@@ -732,16 +890,28 @@ Confidence thresholds (all in `app/core/config.py` / `.env`):
 | GET | `/health` | Liveness probe |
 | GET | `/` | Service metadata + route list |
 | POST | `/intake/gmail` | Normalize a raw Gmail payload (dev/testing) |
+| POST | `/api/v1/auth/google/start` | `{authorization_url, flow_id}` — begin login (Phase 15) |
 | GET | `/api/v1/auth/google/login` | Redirect to Google consent screen |
-| GET | `/api/v1/auth/google/callback` | OAuth redirect target; stores credentials |
-| GET | `/api/v1/auth/google/status` | `{ "connected": bool, "provider": "gmail" }` |
-| POST | `/api/v1/auth/google/disconnect` | Forget stored credentials (dev) |
+| GET | `/api/v1/auth/google/callback` | OAuth redirect target; creates user + session |
+| GET | `/api/v1/auth/google/session?flow_id=` | exchange `flow_id` for the bearer session token |
+| GET | `/api/v1/auth/me` | current user + `gmail_connected` (bearer) |
+| POST | `/api/v1/auth/logout` | revoke the session (bearer) |
+| GET | `/api/v1/auth/google/status` | current user's Gmail connection (bearer) |
+| POST | `/api/v1/auth/google/disconnect` | forget the current user's Gmail creds (bearer) |
 | GET | `/api/v1/gmail/unread?max_results=N` | Unread messages → `NormalizedEmail` |
 | GET | `/api/v1/gmail/unread/triage?max_results=N` | ... → Triage Agent classification |
 | GET | `/api/v1/gmail/unread/actions?max_results=N` | ... → Action Agent required actions |
 | GET | `/api/v1/gmail/unread/deadlines?max_results=N` | ... → Deadline Agent extracted deadlines |
 | GET | `/api/v1/gmail/unread/priorities?max_results=N` | ... → Priority Agent score + level |
 | GET | `/api/v1/gmail/unread/process?max_results=N&persist=true` | ... → **Final Decision Object + persisted to SQLite** |
+| GET | `/api/v1/audit/verify` | recompute the hash chain → `{valid, records_checked, first_invalid_record, reason}` (Phase 14) |
+| GET | `/api/v1/audit/events?limit=&offset=` | the tamper-evident audit ledger, newest first (metadata only) |
+| POST | `/api/v1/devices/register` | register / refresh this device's FCM token (bearer, Phase 16) |
+| POST | `/api/v1/devices/unregister` | deactivate an FCM token (logout on this device) |
+| GET | `/api/v1/devices` | the current user's active push devices |
+
+*(Phase 9–13 state / monitoring / reminder / notification / sync endpoints —
+see `docs/API_CONTRACT.md`.)*
 
 ### Error responses
 
@@ -757,14 +927,21 @@ Typed, clean, and free of secrets:
 
 ---
 
-## Gmail scope
+## Gmail scopes
 
-Only **`https://www.googleapis.com/auth/gmail.readonly`**.
+Two narrow scopes, nothing wider:
 
-* It is the narrowest scope that can still read a message **body** (which the
-  Mail Intake Agent needs). `gmail.metadata` is narrower but cannot read bodies.
-* It grants **read-only** access: no send, no modify, no delete, no label
-  changes, no settings, and no access to any other Google API.
+* **`https://www.googleapis.com/auth/gmail.readonly`** — the narrowest scope that
+  can still read a message **body** (which the Mail Intake Agent needs).
+  `gmail.metadata` is narrower but cannot read bodies.
+* **`https://www.googleapis.com/auth/gmail.send`** — send a reply the user
+  explicitly approved (the AI reply feature). It can **only** send: it cannot
+  read, modify, delete, or list mail.
+
+Together they still grant **no** access to labels, filters, or account settings,
+and no access to any other Google API. The AI never sends on its own — a reply is
+sent only from an explicit "Send Reply" tap, with the exact body the user
+approved.
 
 ---
 
@@ -773,8 +950,51 @@ Only **`https://www.googleapis.com/auth/gmail.readonly`**.
 Credentials are stored via the `TokenStore` interface
 (`get` / `put` / `delete` / `list_accounts`), keyed by account id. Development
 uses `FileTokenStore` — one JSON file per account under `GOOGLE_TOKEN_STORAGE_PATH`
-(`.tokens/`, git-ignored, not encrypted). Swap in a database-backed
-implementation later without touching the auth service or routes.
+(`.tokens/`, git-ignored, not encrypted — deploy with restrictive file
+permissions / a secret store). Swap in a database-backed implementation later
+without touching the auth service or routes.
+
+---
+
+## Data security (Phase 14)
+
+**Encryption at rest** — `DATA_ENCRYPTION_ENABLED=true` + a 32-byte
+`DATA_ENCRYPTION_KEY` (base64url / hex) turns on transparent AES-256-GCM for the
+sensitive columns (`emails.subject/snippet/sender_*`, `actions.description/
+target_link/raw_deadline_hint`, `deadlines.source_text/ambiguity_reason`,
+`reminders.note`, `notifications.detail`, `gmail_sync_state.account_email`).
+Identifiers, enums, scores, booleans and timestamps stay plaintext (they drive
+indexing / filtering / ordering). Generate a key:
+
+```bash
+python -c "import secrets,base64;print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
+```
+
+`APP_ENV=production` + encryption enabled + no valid key ⇒ **the app refuses to
+start**. `APP_ENV=development` + no key ⇒ an insecure built-in key + a loud
+warning. A random key is never auto-generated. Legacy plaintext rows read back
+unchanged; the next write encrypts them. Key rotation needs an offline
+re-encrypt — see [`../docs/SECURITY.md`](../docs/SECURITY.md).
+
+**Secret minimisation** — `app/core/sanitization.py` masks OTPs / passwords /
+API keys / bearer & refresh tokens / JWTs in logs (a `RedactingFilter` on every
+`agent_amar*` logger), notification payloads, processing-run metadata, OAuth
+error text and the audit chain. Raw OTPs never reach any of those.
+
+**Tamper-evident audit chain** — `audit_events`, a SHA-256 hash-chained
+append-only ledger of **non-sensitive metadata** (`EMAIL_INGESTED`,
+`EMAIL_PROCESSED`, `EMAIL_VIEWED`, `ACTION_CREATED`, `DEADLINE_CREATED`,
+`REMINDER_CREATED`, `NOTIFICATION_SENT`, `GMAIL_CONNECTED`, `GMAIL_SYNCED`).
+`GET /api/v1/audit/verify` recomputes every hash and detects modified records,
+broken links and sequence gaps.
+
+| Env var | Default | |
+|---|---|---|
+| `DATA_ENCRYPTION_ENABLED` | `true` | AES-256-GCM at rest |
+| `DATA_ENCRYPTION_KEY` | `""` | 32-byte base64url / hex; required in production |
+| `APP_ENV` | `development` | `production` enforces key validation |
+
+Full design: [`../docs/SECURITY.md`](../docs/SECURITY.md).
 
 ---
 
@@ -810,8 +1030,46 @@ redesigned. Clarifications recorded in the vault:
     11B.1 added the background scheduler — `docs/BACKGROUND_SCHEDULER.md`.
 12. Phase 12 added incremental Gmail sync — `docs/GMAIL_SYNC.md`, new
     `gmail_sync_state` table, `POST /api/v1/gmail/sync`.
+13. Phase 14 added encryption at rest, secret masking, and the tamper-evident
+    audit chain — `docs/SECURITY.md`, new `audit_events` table,
+    `GET /api/v1/audit/verify` · `/events`.
+14. Phase 15 made the backend multi-user — `docs/MIGRATION_MULTIUSER.md`,
+    `docs/SECURITY.md` §6, new `users` / `app_sessions` / `oauth_credentials`
+    tables, `user_pk` scoping, the `…/auth/google/start` · `/session` ·
+    `/api/v1/auth/me` · `/logout` endpoints.
+15. Phase 16 added backend push via FCM — `docs/PUSH_NOTIFICATIONS.md`, new
+    `device_registrations` table + `notifications.pushed_at`, `/api/v1/devices/*`,
+    `FIREBASE_CREDENTIALS_*` config. `docs/API_CONTRACT.md` §11 (device endpoints).
 
 ---
+
+## Push notifications (Phase 16)
+
+Backend-initiated **Firebase Cloud Messaging** so the user is notified when the
+Flutter app is foreground, background, swiped away, or terminated. Full detail:
+[`../docs/PUSH_NOTIFICATIONS.md`](../docs/PUSH_NOTIFICATIONS.md).
+
+* **Both layers, on purpose.** `flutter_local_notifications` handles foreground
+  presentation, local reminders, the alarm dialog and tap navigation. FCM handles
+  the case the backend must reach a closed app. A foreground FCM message is
+  handed to the local layer to display.
+* **Flow.** agents create a `notifications` row → `dispatch_unpushed(user_id)` (own
+  DB session, non-fatal) → `PushNotificationService` → FCM v1 → the user's active
+  `device_registrations`. `notifications.pushed_at` guarantees **one push per
+  row** across scheduler cycles.
+* **Payload = ids only** (`notification_id`, `email_id`, `type`, `severity`,
+  `requires_alarm`). Never OTPs / passwords / tokens / email subject or body —
+  the app fetches the authorised email after the tap.
+* **Multi-user.** every token belongs to an authenticated user; a push goes only
+  to that user's devices; a shared handset's token is reassigned on new login;
+  logout / invalid-token / Gmail-disconnect all stop pushes correctly.
+* **Config (server-side only).** `FIREBASE_CREDENTIALS_FILE` **or**
+  `FIREBASE_CREDENTIALS_JSON` (+ `FIREBASE_PROJECT_ID`); `PUSH_ENABLED`,
+  `PUSH_MAX_AGE_MINUTES`. Unconfigured ⇒ the pipeline runs, push is skipped, no
+  secret ever reaches Flutter.
+* **Android.** `firebase_core` + `firebase_messaging`; uncomment the
+  `google-services` gradle lines after adding `android/app/google-services.json`
+  (see the doc). `flutter analyze` / `flutter test` do not need it.
 
 ## Next step
 

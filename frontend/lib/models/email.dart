@@ -14,6 +14,18 @@ class Email {
   final AgentAnalysis analysis;
   final UserState userState;
 
+  /// The single mutually-exclusive inbox bucket, decided by the backend
+  /// (`primary_category`). Flutter filters sections on THIS, never on
+  /// `analysis.actionRequired` / `priority` directly. It is the user's manual
+  /// correction when they made one, else the automated derivation.
+  final PrimaryCategory primaryCategory;
+
+  /// The automated derivation, kept even after a user correction (Phase 18).
+  final PrimaryCategory autoPrimaryCategory;
+
+  /// True when the user manually corrected [primaryCategory].
+  final bool primaryCategoryUserCorrected;
+
   const Email({
     required this.id,
     required this.senderName,
@@ -26,12 +38,37 @@ class Email {
     this.labels = const ['INBOX'],
     required this.analysis,
     this.userState = const UserState(),
-  });
+    this.primaryCategory = PrimaryCategory.lowPriority,
+    PrimaryCategory? autoPrimaryCategory,
+    this.primaryCategoryUserCorrected = false,
+  }) : autoPrimaryCategory = autoPrimaryCategory ?? primaryCategory;
 
   bool get isActionRequired => analysis.actionRequired && !userState.isCompleted;
   bool get hasDeadline => analysis.deadline != null;
   bool get isCritical => analysis.priority == PriorityLevel.critical;
   bool get isSnoozed => userState.isSnoozed;
+
+  /// Whether this email still needs the user's attention — the rule the
+  /// attention-dashboard homepage is built on. Mirrors the backend
+  /// (`GET /api/v1/emails?active=true` / `EmailStateOut.is_active`):
+  ///
+  /// * resolved / completed, or currently snoozed → not active
+  /// * Reply Required / Action Required → active until resolved (opening it is
+  ///   not enough)
+  /// * Important / Low Priority (nothing actionable) → active only until the
+  ///   user opens / acknowledges it
+  ///
+  /// Used to drop an item from the feed the instant its state changes, without
+  /// waiting for a refetch. The email is never deleted.
+  bool get isActive {
+    if (userState.isCompleted) return false;
+    if (userState.isSnoozed) return false;
+    if (primaryCategory == PrimaryCategory.replyRequired ||
+        primaryCategory == PrimaryCategory.actionRequired) {
+      return true;
+    }
+    return !userState.isViewed;
+  }
 
   Email copyWith({
     String? id,
@@ -45,6 +82,9 @@ class Email {
     List<String>? labels,
     AgentAnalysis? analysis,
     UserState? userState,
+    PrimaryCategory? primaryCategory,
+    PrimaryCategory? autoPrimaryCategory,
+    bool? primaryCategoryUserCorrected,
   }) {
     return Email(
       id: id ?? this.id,
@@ -58,6 +98,10 @@ class Email {
       labels: labels ?? this.labels,
       analysis: analysis ?? this.analysis,
       userState: userState ?? this.userState,
+      primaryCategory: primaryCategory ?? this.primaryCategory,
+      autoPrimaryCategory: autoPrimaryCategory ?? this.autoPrimaryCategory,
+      primaryCategoryUserCorrected:
+          primaryCategoryUserCorrected ?? this.primaryCategoryUserCorrected,
     );
   }
 
@@ -80,6 +124,11 @@ class Email {
       subject: json['subject'] ?? '',
       body: json['body'] ?? json['snippet'] ?? '',
       snippet: json['snippet'] ?? '',
+      primaryCategory: PrimaryCategory.fromWire(json['primary_category'] as String?),
+      autoPrimaryCategory: PrimaryCategory.fromWire(
+          (json['auto_primary_category'] ?? json['primary_category']) as String?),
+      primaryCategoryUserCorrected:
+          (json['primary_category_source'] as String?)?.toLowerCase() == 'user',
       receivedAt: json['received_at'] != null ? DateTime.parse(json['received_at']) : DateTime.now(),
       isUnread: json['is_unread'] ?? false,
       labels: (json['labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? ['INBOX'],
@@ -104,6 +153,9 @@ class Email {
     'subject': subject,
     'body': body,
     'snippet': snippet,
+    'primary_category': primaryCategory.wire,
+    'auto_primary_category': autoPrimaryCategory.wire,
+    'primary_category_source': primaryCategoryUserCorrected ? 'user' : 'auto',
     'received_at': receivedAt.toIso8601String(),
     'is_unread': isUnread,
     'labels': labels,

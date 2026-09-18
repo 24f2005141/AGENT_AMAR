@@ -1,5 +1,5 @@
 name: agent_amar
-description: "A new Flutter project."
+description: "Sorted — your attention, organized."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -37,7 +37,14 @@ dependencies:
   http: ^1.2.2
   url_launcher: ^6.3.1
   flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
   shared_preferences: ^2.3.2
+  flutter_secure_storage: ^9.2.2
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  app_links: ^6.4.1
+  home_widget: ^0.7.0
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +57,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  # Generates the Android/iOS launcher icon assets from assets/branding —
+  # dev-time tool only, run via `dart run flutter_launcher_icons`.
+  flutter_launcher_icons: ^0.14.3
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -60,6 +71,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/branding/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -91,3 +105,22 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Sorted launcher icon — generated via `dart run flutter_launcher_icons`.
+# Source: assets/branding/sorted_mark.png (derived from the supplied Sorted
+# icon artwork; the wordmark/tagline are separate Flutter text, not baked into
+# the launcher icon). Re-run the command above after changing the source image.
+flutter_launcher_icons:
+  image_path: "assets/branding/sorted_mark.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  min_sdk_android: 21
+  adaptive_icon_background: "#010F2A"
+  adaptive_icon_foreground: "assets/branding/sorted_mark.png"
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false

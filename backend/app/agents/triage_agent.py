@@ -26,6 +26,14 @@ from pydantic import ValidationError
 
 from app.agents import triage_rules as rules
 from app.core.config import Settings, get_settings
+from app.core.logging_setup import secure_logger
+from app.ml.email_classifier import (
+    EmailMLClassifier,
+    MLPredictionError,
+    Prediction,
+    get_email_ml_classifier,
+)
+from app.ml.metrics import get_classification_metrics
 from app.models.agent_output import AgentError, AgentOutput, AgentStatus
 from app.models.email import NormalizedEmail
 from app.models.triage import (
@@ -48,6 +56,8 @@ from app.services.llm_service import (
 
 AGENT_NAME = "Triage Agent"
 AGENT_VERSION = "0.1.0"
+
+logger = secure_logger(__name__)
 
 _IMPORTANCE_RANK = {ImportanceEstimate.LOW: 0, ImportanceEstimate.MEDIUM: 1, ImportanceEstimate.HIGH: 2}
 _RANK_IMPORTANCE = {v: k for k, v in _IMPORTANCE_RANK.items()}
@@ -111,6 +121,23 @@ class _Assessment:
     sender_in_important_list: bool = False
     has_form_link: bool = False
     conflicting_signals: bool = False
+    # --- context carried forward for the ML routing gate ---
+    is_college_domain: bool = False
+    phishing_strong: bool = False
+    has_date_hint: bool = False
+    has_task_hint: bool = False
+
+
+@dataclass
+class _MlOutcome:
+    """Result of the local ML step — carried into the routing trace + metrics."""
+
+    assessment: "_Assessment | None" = None
+    attempted: bool = False          # the model actually ran predict()
+    confidence: float | None = None  # top-class probability, when predict() ran
+    reject_reason: str | None = None  # None => accepted; else why the LLM is next
+    #   disabled | unavailable | predict_error | low_confidence
+    #   | invalid_label | precedence_conflict | signal_conflict
 
 
 class TriageAgent:
@@ -120,9 +147,16 @@ class TriageAgent:
         self,
         settings: Settings | None = None,
         llm_client: LLMClient | None = None,
+        ml_classifier: EmailMLClassifier | None = None,
     ) -> None:
         self.settings = settings or get_settings()
         self._llm = llm_client or NullLLMClient()
+        # ``None`` -> the ML step is skipped entirely. When enabled but no model
+        # file exists the classifier simply reports ``is_available() == False``.
+        if ml_classifier is not None:
+            self._ml: EmailMLClassifier | None = ml_classifier
+        else:
+            self._ml = get_email_ml_classifier(self.settings)
         self._tz = self._resolve_tz(self.settings.default_timezone)
 
     # -- public API -----------------------------------------------------
@@ -134,19 +168,44 @@ class TriageAgent:
         det = self._deterministic(email)
         assessment = det
 
-        if det.confidence < self.settings.triage_llm_threshold and self._llm.is_available:
-            try:
-                llm = self._llm_classify(email, det)
-                assessment = self._merge(det, llm, email)
-            except LLMResponseError as exc:
-                errors.append(AgentError(code="invalid_llm_response", message=str(exc)))
-                assessment = self._as_fallback(det)
-            except LLMUnavailableError as exc:
-                errors.append(AgentError(code="llm_unavailable", message=str(exc)))
-                assessment = self._as_fallback(det)
+        ml = _MlOutcome(reject_reason="deterministic_confident")
+        llm_invoked = False
+
+        # Layer 1.5 (local ML) + Layer 2 (LLM) — only when the deterministic
+        # signal is weak. The local model is tried first; if it is confident and
+        # does not conflict with a strong deterministic signal its answer is used
+        # and the LLM call is skipped entirely.
+        if det.confidence < self.settings.triage_llm_threshold:
+            ml = self._ml_assess(email, det)
+            if ml.assessment is not None:
+                assessment = ml.assessment
+            elif self._llm.is_available:
+                llm_invoked = True
+                try:
+                    llm = self._llm_classify(email, det)
+                    assessment = self._merge(det, llm, email)
+                except LLMResponseError as exc:
+                    errors.append(AgentError(code="invalid_llm_response", message=str(exc)))
+                    assessment = self._as_fallback(det)
+                except LLMUnavailableError as exc:
+                    errors.append(AgentError(code="llm_unavailable", message=str(exc)))
+                    assessment = self._as_fallback(det)
+
+        method_value = getattr(assessment.method, "value", str(assessment.method))
+        routing = {
+            "method": method_value,
+            "deterministic_confidence": round(det.confidence, 4),
+            "ml_attempted": ml.attempted,
+            "ml_confidence": (round(ml.confidence, 4) if ml.confidence is not None else None),
+            "ml_skipped": method_value != ClassificationMethod.ML.value,
+            "ml_reject_reason": (None if method_value == ClassificationMethod.ML.value
+                                 else ml.reject_reason),
+            "llm_invoked": llm_invoked,
+        }
+        get_classification_metrics().record(routing)
 
         needs_review = self._needs_human_review(assessment)
-        data = self._build_data(assessment, needs_review)
+        data = self._build_data(assessment, needs_review, routing)
         status = AgentStatus.PARTIAL if errors else AgentStatus.OK
 
         return AgentOutput(
@@ -290,6 +349,10 @@ class TriageAgent:
             sender_importance=sender_importance,
             sender_in_important_list=sender_in_list,
             has_form_link=has_form_link,
+            is_college_domain=is_college,
+            phishing_strong=phishing_strong,
+            has_date_hint=ctx.has_date_hint,
+            has_task_hint=ctx.has_task_hint,
         )
 
     def _score_to_confidence(self, top: float, second: float, hit_count: int) -> float:
@@ -388,6 +451,105 @@ class TriageAgent:
         det.method = ClassificationMethod.LLM_FALLBACK_DETERMINISTIC
         return det
 
+    # -- layer 1.5: local ML classifier ---------------------------
+
+    def _ml_assess(self, email: NormalizedEmail, det: _Assessment) -> _MlOutcome:
+        """Run the local ML step and describe its outcome.
+
+        ``outcome.assessment is None`` means the LLM (or the deterministic
+        fallback) is next; ``outcome.reject_reason`` says why.
+        """
+        ml = self._ml
+        if ml is None:
+            return _MlOutcome(reject_reason="disabled")
+        if not ml.is_available():
+            return _MlOutcome(reject_reason="unavailable")
+        try:
+            prediction: Prediction = ml.predict(email.subject, email.body, email.sender.email)
+        except MLPredictionError:
+            return _MlOutcome(reject_reason="unavailable")
+        except Exception as exc:  # noqa: BLE001 — a broken model must never break triage
+            logger.warning(
+                "Local ML prediction failed (%s) — continuing to LLM fallback.",
+                type(exc).__name__,
+            )
+            return _MlOutcome(attempted=True, reject_reason="predict_error")
+
+        conf = float(prediction.confidence)
+        if conf < self.settings.ml_classifier_threshold:
+            return _MlOutcome(attempted=True, confidence=conf, reject_reason="low_confidence")
+
+        try:
+            category = TriageCategory(prediction.label)
+        except ValueError:
+            return _MlOutcome(attempted=True, confidence=conf, reject_reason="invalid_label")
+
+        # Hard safety precedence — applied to the ML pick exactly as it is to the
+        # LLM's. If it *changes* the category, the ML pick was unsafe -> skip it.
+        ctx = _PrecedenceContext(
+            scores={category: 5.0},
+            is_college_domain=det.is_college_domain,
+            phishing_strong=det.phishing_strong,
+            has_date_hint=False,
+            has_task_hint=False,
+            has_academic_signal=True,
+        )
+        safe_category, _notes = _apply_hard_precedence(category, ctx)
+        if safe_category != category:
+            return _MlOutcome(attempted=True, confidence=conf, reject_reason="precedence_conflict")
+
+        if self._ml_conflicts(det, category):
+            return _MlOutcome(attempted=True, confidence=conf, reject_reason="signal_conflict")
+
+        importance = self._importance_for(category, det.sender_importance, det.is_college_domain)
+        reasoning = (
+            f"Local ML model classified this as {category.value} "
+            f"(confidence {conf:.2f}); LLM escalation avoided."
+        )
+        logger.info(
+            "Triage classified via local ML: label=%s confidence=%.2f (LLM escalation avoided)",
+            category.value,
+            conf,
+        )
+        assessment = _Assessment(
+            category=category,
+            subcategory=(det.subcategory if category == det.category else None),
+            importance=importance,
+            confidence=round(float(prediction.confidence), 4),
+            reasoning=reasoning,
+            method=ClassificationMethod.ML,
+            keywords=det.keywords,
+            category_scores=det.category_scores,
+            precedence_applied=det.precedence_applied,
+            sender_importance=det.sender_importance,
+            sender_in_important_list=det.sender_in_important_list,
+            has_form_link=det.has_form_link,
+            is_college_domain=det.is_college_domain,
+            phishing_strong=det.phishing_strong,
+            has_date_hint=det.has_date_hint,
+            has_task_hint=det.has_task_hint,
+        )
+        return _MlOutcome(assessment=assessment, attempted=True, confidence=conf)
+
+    @staticmethod
+    def _ml_conflicts(det: _Assessment, ml_category: TriageCategory) -> bool:
+        """True when the ML pick contradicts a strong deterministic signal."""
+        if ml_category == det.category:
+            return False
+        # 1. Strong phishing signal — deterministic SPAM stands.
+        if det.phishing_strong and ml_category != TriageCategory.SPAM:
+            return True
+        # 2. A deterministic precedence rule already fired (opportunity beats
+        #    event, exam beats faculty, college-domain guard, …) — the ML model
+        #    must not silently undo it.
+        if det.precedence_applied:
+            return True
+        # 3. Explicitly actionable + dated content must not be downgraded to a
+        #    low-band bucket (promotional / newsletter / spam / social).
+        if det.has_date_hint and det.has_task_hint and ml_category in LOW_BAND_CATEGORIES:
+            return True
+        return False
+
     # -- shared helpers --------------------------------------------
 
     def _importance_for(
@@ -463,7 +625,9 @@ class TriageAgent:
             return True
         return False
 
-    def _build_data(self, a: _Assessment, needs_review: bool) -> TriageData:
+    def _build_data(
+        self, a: _Assessment, needs_review: bool, routing: dict | None = None
+    ) -> TriageData:
         signals = TriageSignals(
             keywords=a.keywords,
             sender_in_important_list=a.sender_in_important_list,
@@ -473,6 +637,9 @@ class TriageAgent:
             category_scores=a.category_scores,
             precedence_applied=a.precedence_applied,
             conflicting_signals=a.conflicting_signals,
+            # Routing trace (metadata only — never any email content). Lets a
+            # dev see how each email was classified. See app/ml/metrics.py.
+            classification_routing=routing or {},
         )
         return TriageData(
             category=a.category,

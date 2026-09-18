@@ -248,6 +248,58 @@ def test_ollama_uses_configured_base_url(monkeypatch):
     assert seen["timeout"] == 7.0
 
 
+@pytest.mark.parametrize(
+    "base_url, expected",
+    [
+        # LAN, with and without trailing slash
+        ("http://192.168.1.11:11434", "http://192.168.1.11:11434/api/generate"),
+        ("http://192.168.1.11:11434/", "http://192.168.1.11:11434/api/generate"),
+        # HTTPS tunnel (no port), with and without trailing slash(es)
+        ("https://mir.ollamaserver.com", "https://mir.ollamaserver.com/api/generate"),
+        ("https://mir.ollamaserver.com/", "https://mir.ollamaserver.com/api/generate"),
+        ("https://mir.ollamaserver.com//", "https://mir.ollamaserver.com/api/generate"),
+    ],
+)
+def test_ollama_base_url_lan_and_https_tunnel(monkeypatch, base_url, expected):
+    """Same client works for LAN http:// and a public https:// tunnel — no
+    double slash, no duplicated /api path, timeout honoured."""
+    seen = {}
+
+    def _h(url, **kw):
+        seen["url"] = url
+        seen["timeout"] = kw.get("timeout")
+        return _FakeHTTPResponse(json_data={"response": '{"category": "OTHER", "confidence": 0.5}'})
+
+    _patch_ollama_post(monkeypatch, _h)
+    client = OllamaLLMClient(model="qwen2.5:3b", base_url=base_url, timeout=20.0)
+    out = client.complete_json("s", "u")
+    assert seen["url"] == expected
+    assert "//api/generate" not in seen["url"]
+    assert seen["timeout"] == 20.0
+    assert out == {"category": "OTHER", "confidence": 0.5}
+
+
+def test_ollama_base_url_is_env_driven_via_settings(monkeypatch):
+    """build_llm_client passes OLLAMA_BASE_URL straight through — no hardcoding."""
+    seen = {}
+
+    def _h(url, **kw):
+        seen["url"] = url
+        return _FakeHTTPResponse(json_data={"response": "{}"})
+
+    _patch_ollama_post(monkeypatch, _h)
+    client = build_llm_client(
+        Settings(
+            llm_provider="ollama",
+            llm_model="qwen2.5:3b",
+            ollama_base_url="https://mir.ollamaserver.com",
+            llm_timeout_seconds=20,
+        )
+    )
+    client.complete_json("s", "u")
+    assert seen["url"] == "https://mir.ollamaserver.com/api/generate"
+
+
 def test_ollama_success(monkeypatch):
     _patch_ollama_post(
         monkeypatch,

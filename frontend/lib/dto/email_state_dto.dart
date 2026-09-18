@@ -319,6 +319,14 @@ class EmailStateOutDto {
   final String? snippet;
   final DateTime? receivedAt;
   final String finalCategory;
+  /// Canonical mutually-exclusive inbox bucket: REPLY_REQUIRED / ACTION_REQUIRED
+  /// / IMPORTANT / LOW_PRIORITY. The UI filters on this. It is the user's manual
+  /// correction when they made one, else the automated derivation.
+  final String primaryCategory;
+  /// The latest AUTOMATED derivation, kept even after a user correction.
+  final String autoPrimaryCategory;
+  /// "auto" | "user".
+  final String primaryCategorySource;
   final double? categoryConfidence;
   final String priorityLevel;
   final int priorityScore;
@@ -334,6 +342,10 @@ class EmailStateOutDto {
   final DateTime? completedAt;
   final DateTime? snoozedUntil;
   final bool needsHumanReview;
+  /// Whether the email still needs the user's attention (homepage feed) — a
+  /// derived, backend-authoritative view of isCompleted / isViewed /
+  /// snoozedUntil / primaryCategory. See `EmailStateOut.is_active`.
+  final bool isActive;
   final String folderLabel;
   final bool shouldNotify;
   final bool shouldMonitor;
@@ -351,6 +363,9 @@ class EmailStateOutDto {
     this.snippet,
     this.receivedAt,
     required this.finalCategory,
+    this.primaryCategory = 'LOW_PRIORITY',
+    this.autoPrimaryCategory = 'LOW_PRIORITY',
+    this.primaryCategorySource = 'auto',
     this.categoryConfidence,
     required this.priorityLevel,
     required this.priorityScore,
@@ -366,6 +381,7 @@ class EmailStateOutDto {
     this.completedAt,
     this.snoozedUntil,
     this.needsHumanReview = false,
+    this.isActive = true,
     required this.folderLabel,
     this.shouldNotify = false,
     this.shouldMonitor = false,
@@ -387,6 +403,10 @@ class EmailStateOutDto {
           ? DateTime.tryParse(json['received_at'] as String)
           : null,
       finalCategory: json['final_category'] as String? ?? 'OTHER',
+      primaryCategory: json['primary_category'] as String? ?? 'LOW_PRIORITY',
+      autoPrimaryCategory: json['auto_primary_category'] as String? ??
+          json['primary_category'] as String? ?? 'LOW_PRIORITY',
+      primaryCategorySource: json['primary_category_source'] as String? ?? 'auto',
       categoryConfidence: (json['category_confidence'] as num?)?.toDouble(),
       priorityLevel: json['priority_level'] as String? ?? 'LOW',
       priorityScore: json['priority_score'] as int? ?? 0,
@@ -410,6 +430,7 @@ class EmailStateOutDto {
           ? DateTime.tryParse(json['snoozed_until'] as String)
           : null,
       needsHumanReview: json['needs_human_review'] as bool? ?? false,
+      isActive: json['is_active'] as bool? ?? true,
       folderLabel: json['folder_label'] as String? ?? 'AMAR/Other',
       shouldNotify: json['should_notify'] as bool? ?? false,
       shouldMonitor: json['should_monitor'] as bool? ?? false,
@@ -435,6 +456,9 @@ class EmailStateOutDto {
         'snippet': snippet,
         'received_at': receivedAt?.toIso8601String(),
         'final_category': finalCategory,
+        'primary_category': primaryCategory,
+        'auto_primary_category': autoPrimaryCategory,
+        'primary_category_source': primaryCategorySource,
         'category_confidence': categoryConfidence,
         'priority_level': priorityLevel,
         'priority_score': priorityScore,
@@ -450,6 +474,7 @@ class EmailStateOutDto {
         'completed_at': completedAt?.toIso8601String(),
         'snoozed_until': snoozedUntil?.toIso8601String(),
         'needs_human_review': needsHumanReview,
+        'is_active': isActive,
         'folder_label': folderLabel,
         'should_notify': shouldNotify,
         'should_monitor': shouldMonitor,
@@ -477,6 +502,9 @@ class EmailStateDetailOutDto extends EmailStateOutDto {
     super.snippet,
     super.receivedAt,
     required super.finalCategory,
+    super.primaryCategory,
+    super.autoPrimaryCategory,
+    super.primaryCategorySource,
     super.categoryConfidence,
     required super.priorityLevel,
     required super.priorityScore,
@@ -492,6 +520,7 @@ class EmailStateDetailOutDto extends EmailStateOutDto {
     super.completedAt,
     super.snoozedUntil,
     super.needsHumanReview,
+    super.isActive,
     required super.folderLabel,
     super.shouldNotify,
     super.shouldMonitor,
@@ -518,6 +547,9 @@ class EmailStateDetailOutDto extends EmailStateOutDto {
       snippet: base.snippet,
       receivedAt: base.receivedAt,
       finalCategory: base.finalCategory,
+      primaryCategory: base.primaryCategory,
+      autoPrimaryCategory: base.autoPrimaryCategory,
+      primaryCategorySource: base.primaryCategorySource,
       categoryConfidence: base.categoryConfidence,
       priorityLevel: base.priorityLevel,
       priorityScore: base.priorityScore,
@@ -533,6 +565,7 @@ class EmailStateDetailOutDto extends EmailStateOutDto {
       completedAt: base.completedAt,
       snoozedUntil: base.snoozedUntil,
       needsHumanReview: base.needsHumanReview,
+      isActive: base.isActive,
       folderLabel: base.folderLabel,
       shouldNotify: base.shouldNotify,
       shouldMonitor: base.shouldMonitor,

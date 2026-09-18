@@ -34,11 +34,14 @@ from app.models.decision import (
     DecisionAction,
     DecisionDeadline,
     FinalDecision,
+    PrimaryCategory,
     RoutingDecision,
     TraceEntry,
+    derive_primary_category,
 )
 from app.models.email import NormalizedEmail
 from app.models.priority import PriorityLevel, ProximityBucket
+from app.ml.email_classifier import get_email_ml_classifier
 from app.services.llm_service import build_llm_client
 from app.services.priority_context import get_priority_context
 from app.utils import priority_scoring as ps
@@ -228,6 +231,13 @@ class AMAROrchestrator:
             for i, x in enumerate(d.get("deadlines", []))
         ]
 
+        action_required = bool(a.get("action_required", False))
+        primary_action_type = a.get("action_type")
+        priority_level_value = str(p.get("priority_level", "LOW"))
+        primary_category = self._primary_category(
+            category, action_required, primary_action_type, actions, priority_level_value
+        )
+
         conflicts = self._resolve_conflicts(category, tri, act, ddl, pri, trace)
 
         notify = bool(p.get("notify", False))
@@ -246,8 +256,9 @@ class AMAROrchestrator:
             final_category=category,
             category_confidence=(None if tri.status == "error"
                                  else float(tri.data.get("confidence", 0.0))),
-            action_required=bool(a.get("action_required", False)),
-            primary_action_type=a.get("action_type"),
+            primary_category=primary_category,
+            action_required=action_required,
+            primary_action_type=primary_action_type,
             actions=actions,
             deadline=d.get("normalized_deadline"),
             deadline_ambiguous=bool(d.get("ambiguity_flag", False)),
@@ -266,6 +277,27 @@ class AMAROrchestrator:
             review_reasons=list(dict.fromkeys(conflicts.reasons)),
             conflicts_resolved=conflicts.entries,
             agent_trace=trace,
+        )
+
+    # -- primary inbox bucket (mutually exclusive) ----------------
+
+    @staticmethod
+    def _primary_category(
+        category: str,
+        action_required: bool,
+        primary_action_type: str | None,
+        actions: list[DecisionAction],
+        priority_level: str,
+    ) -> PrimaryCategory:
+        """Collapse the agent outputs into ONE inbox bucket (see
+        :func:`app.models.decision.derive_primary_category` — the shared rule the
+        DB backfill also uses)."""
+        return derive_primary_category(
+            final_category=category,
+            action_required=action_required,
+            primary_action_type=primary_action_type,
+            action_types=[a.action_type for a in actions],
+            priority_level=priority_level,
         )
 
     # -- conflict resolution (AMAR Orchestrator.md) --------------
@@ -570,8 +602,9 @@ def build_default_orchestrator(settings: Settings | None = None) -> AMAROrchestr
     settings = settings or get_settings()
     llm = build_llm_client(settings)
     context = get_priority_context()
+    ml_classifier = get_email_ml_classifier(settings)
     return AMAROrchestrator(
-        TriageAgent(settings=settings, llm_client=llm),
+        TriageAgent(settings=settings, llm_client=llm, ml_classifier=ml_classifier),
         ActionAgent(settings=settings, llm_client=llm),
         DeadlineAgent(settings=settings, llm_client=llm),
         PriorityAgent(settings=settings, llm_client=llm, context=context),

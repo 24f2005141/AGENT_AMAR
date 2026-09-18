@@ -15,7 +15,7 @@ from app.agents.intake_agent import MailIntakeAgent
 from app.core.errors import GmailIntegrationError, MessageNotFoundError
 from app.models.email import NormalizedEmail
 from app.models.persistence import PersistedRef
-from app.services.gmail_service import GmailService
+from app.services.gmail_service import GmailService, is_spam_message
 from app.services.persistence_service import PersistenceService
 
 
@@ -40,6 +40,10 @@ def process_unread(
             raw = gmail.get_message(message_id)
         except (GmailIntegrationError, MessageNotFoundError) as exc:
             errors.append({"message_id": message_id, "error": exc.public_message})
+            continue
+        if is_spam_message(raw):
+            # Gmail's own SPAM label — never normalized, classified, persisted,
+            # or notified on. No EmailRecord is created for it.
             continue
 
         intake_out = intake.run(raw)

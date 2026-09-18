@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/email.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 
 class SnoozeBottomSheet extends StatefulWidget {
   final Email email;
@@ -22,9 +23,11 @@ class SnoozeBottomSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => SnoozeBottomSheet(
-        email: email,
-        onSnooze: onSnooze,
+      builder: (context) => ScrollableSheetShell(
+        child: SnoozeBottomSheet(
+          email: email,
+          onSnooze: onSnooze,
+        ),
       ),
     );
   }

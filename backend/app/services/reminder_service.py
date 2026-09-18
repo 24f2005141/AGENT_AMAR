@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.models import ReminderRecord
 from app.repositories import EmailRepository, ReminderRepository
+from app.services.audit_service import audit_record
 
 
 class ReminderValidationError(ValueError):
@@ -43,8 +44,9 @@ def _tz_label(dt: datetime) -> str:
 
 
 class ReminderService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, *, user_pk: int | None = None) -> None:
         self.session = session
+        self.user_pk = user_pk
         self.emails = EmailRepository(session)
         self.reminders = ReminderRepository(session)
 
@@ -59,8 +61,10 @@ class ReminderService:
     ) -> ReminderRecord | None:
         """Returns the new reminder, or ``None`` if the email does not exist.
         Raises :class:`ReminderValidationError` for a bad time / action_ref."""
-        email = self.emails.get_by_email_id(email_id, with_children=True)
-        if email is None:
+        email = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if email is None or email.is_spam:
             return None
 
         at = _aware(reminder_at)
@@ -87,16 +91,21 @@ class ReminderService:
         self.reminders.add(reminder)
         self.session.commit()
         self.session.refresh(reminder)
+        audit_record(
+            "REMINDER_CREATED", "reminder", resource_id=f"{email_id}/{reminder.id}",
+            user_pk=email.user_pk,
+            detail={"has_action_ref": action_ref is not None},
+        )
         return reminder
 
     def list_for_email(self, email_id: str) -> list[ReminderRecord] | None:
-        email = self.emails.get_by_email_id(email_id)
+        email = self.emails.get_by_email_id(email_id, user_pk=self.user_pk)
         if email is None:
             return None
         return self.reminders.list_by_email(email.id)
 
     def cancel(self, email_id: str, reminder_id: int) -> ReminderRecord | None:
-        email = self.emails.get_by_email_id(email_id)
+        email = self.emails.get_by_email_id(email_id, user_pk=self.user_pk)
         if email is None:
             return None
         reminder = self.reminders.get(reminder_id)

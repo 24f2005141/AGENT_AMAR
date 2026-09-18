@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DEADLINE COUNTDOWN — nearest upcoming deadline, counted against the
+     device clock (no network, no polling). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/deadline_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="14dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_next_deadline"
+        android:textColor="#E8C170"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.12" />
+
+    <TextView
+        android:id="@+id/deadline_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:textColor="#F0F4F8"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <!-- Native countdown: ticks on the device without any widget update. -->
+    <Chronometer
+        android:id="@+id/deadline_chronometer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#5CD6A0"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/deadline_when"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="#8FA3B8"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:id="@+id/deadline_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/widget_no_deadlines"
+            android:textColor="#5CD6A0"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="@string/widget_no_deadlines_body"
+            android:textColor="#8FA3B8"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

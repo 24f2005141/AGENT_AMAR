@@ -7,6 +7,13 @@ test for isolation.
 
 from __future__ import annotations
 
+import os
+
+# Rate limiting is a production concern, exercised explicitly in
+# tests/test_production_hardening.py. Left on here, the suite's cumulative
+# request count would trip the per-minute budget and fail unrelated tests.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+
 import json
 import os
 from pathlib import Path
@@ -26,6 +33,20 @@ os.environ["GMAIL_SYNC_ENABLED"] = "false"
 # suite offline and deterministic regardless of LLM_PROVIDER in .env.
 os.environ["LLM_PROVIDER"] = "none"
 os.environ["LLM_API_KEY"] = ""
+
+# Phase 16: never let the test suite touch Firebase. Push-specific tests inject a
+# fake FcmClient; everything else runs with push simply skipped.
+os.environ["PUSH_ENABLED"] = "false"
+
+# Local ML pre-classifier OFF for the bulk suite (a developer may have a trained
+# model at backend/data/models/). ML-specific tests build Settings(...) with it
+# enabled and point at a tiny model trained into a tmp dir.
+os.environ["ML_CLASSIFIER_ENABLED"] = "false"
+
+# Phase 14: run the bulk suite with data-at-rest encryption OFF (the DB stores
+# plaintext, exactly as before this phase) so existing assertions are unchanged.
+# Encryption-specific tests call crypto.configure(Settings(...)) explicitly.
+os.environ["DATA_ENCRYPTION_ENABLED"] = "false"
 
 import pytest
 from sqlalchemy import text
@@ -56,11 +77,84 @@ def _clean_tables():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _reset_classification_metrics():
+    """Zero the in-process triage routing counters between tests."""
+    from app.ml.metrics import get_classification_metrics
+
+    get_classification_metrics().reset()
+    yield
+    get_classification_metrics().reset()
+
+
+@pytest.fixture(autouse=True)
+def _reset_reply_send_guard():
+    """Clear the in-process duplicate-send guard between tests."""
+    from app.services.reply_service import reset_send_guard
+
+    reset_send_guard()
+    yield
+    reset_send_guard()
+
+
+@pytest.fixture(autouse=True)
+def _reset_ml_cache():
+    """Drop any cached ML classifier so a test that trains + points at a model
+    never leaks it into the next test."""
+    from app.ml import email_classifier
+
+    email_classifier.reset_cache()
+    yield
+    email_classifier.reset_cache()
+
+
+@pytest.fixture(autouse=True)
+def _reset_crypto():
+    """Phase 14: drop the cached cipher after every test so a crypto test that
+    enables encryption never leaks state into the next test."""
+    from app.core import crypto
+
+    crypto.reset()
+    yield
+    crypto.reset()
+
+
 @pytest.fixture
 def db():
     """A plain session for tests that talk to the DB directly."""
     with db_session.db_session() as s:
         yield s
+
+
+# --- Phase 15: multi-user auth -------------------------------------------
+
+@pytest.fixture(autouse=True)
+def default_user(_clean_tables):
+    """Seed one application user and transparently authenticate every request
+    as that user, so the pre-Phase-15 suite keeps passing while every route is
+    now behind ``get_current_user`` and every query is user-scoped.
+
+    Multi-user tests seed extra users and swap the override themselves.
+    """
+    from app.api.deps import get_current_user
+    from app.db.models import User
+    from app.main import app
+
+    with db_session.db_session() as s:
+        user = User(google_sub="test-sub-default", google_email="default@example.com",
+                    display_name="Default Tester")
+        s.add(user)
+        s.commit()
+        s.refresh(user)
+        s.expunge(user)
+
+    prev = app.dependency_overrides.get(get_current_user)
+    app.dependency_overrides[get_current_user] = lambda: user
+    yield user
+    if prev is None:
+        app.dependency_overrides.pop(get_current_user, None)
+    else:
+        app.dependency_overrides[get_current_user] = prev
 
 
 @pytest.fixture(autouse=True)

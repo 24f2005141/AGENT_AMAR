@@ -16,7 +16,10 @@ import json
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 #: Account key used while the system is single-user (development).
 DEFAULT_ACCOUNT = "default"
@@ -110,3 +113,69 @@ class FileTokenStore(TokenStore):
         if not self.directory.is_dir():
             return []
         return sorted(p.stem for p in self.directory.glob("*.json"))
+
+
+class DbTokenStore(TokenStore):
+    """Per-user OAuth credential blobs in the ``oauth_credentials`` table
+    (Phase 15). The blob is stored via :class:`EncryptedString` — AES-256-GCM
+    at rest (Phase 14). ``account_id`` is ``str(user.id)``.
+
+    This is the production store; ``FileTokenStore`` remains the documented dev
+    fallback and is still used by the standalone scheduler when it has no session.
+    """
+
+    def __init__(self, session: "Session") -> None:
+        self.session = session
+
+    def _row(self, account_id: str):
+        from app.db.models import OAuthCredential
+
+        try:
+            user_pk = int(account_id)
+        except (TypeError, ValueError):
+            return None
+        return (
+            self.session.query(OAuthCredential)
+            .filter(OAuthCredential.user_pk == user_pk)
+            .one_or_none()
+        )
+
+    def get(self, account_id: str = DEFAULT_ACCOUNT) -> dict[str, Any] | None:
+        row = self._row(account_id)
+        if row is None or not row.credentials_json:
+            return None
+        try:
+            blob = json.loads(row.credentials_json)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if row.account_email and "account_email" not in blob:
+            blob["account_email"] = row.account_email
+        return blob
+
+    def put(self, data: dict[str, Any], account_id: str = DEFAULT_ACCOUNT) -> None:
+        from app.db.models import OAuthCredential
+
+        user_pk = int(account_id)
+        row = self._row(account_id)
+        if row is None:
+            row = OAuthCredential(user_pk=user_pk, provider="gmail")
+            self.session.add(row)
+        row.credentials_json = json.dumps(data)
+        row.account_email = data.get("account_email")
+        self.session.commit()
+
+    def delete(self, account_id: str = DEFAULT_ACCOUNT) -> None:
+        row = self._row(account_id)
+        if row is not None:
+            self.session.delete(row)
+            self.session.commit()
+
+    def list_accounts(self) -> list[str]:
+        from app.db.models import OAuthCredential
+
+        rows = (
+            self.session.query(OAuthCredential.user_pk)
+            .filter(OAuthCredential.credentials_json.is_not(None))
+            .all()
+        )
+        return sorted(str(r[0]) for r in rows)

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -5,13 +6,17 @@ import '../dto/email_state_dto.dart';
 import '../dto/mappers/dto_mapper.dart';
 import '../models/agent_analysis.dart';
 import '../models/email.dart';
+import '../services/local_schedule_service.dart';
 import '../state/inbox_controller.dart';
 import '../theme/app_theme.dart';
+import '../widgets/classification_picker_sheet.dart';
 import '../widgets/countdown_timer_view.dart';
 import '../widgets/priority_badge.dart';
 import '../widgets/reminder_bottom_sheet.dart';
+import '../widgets/reply_suggestions_panel.dart';
 import '../widgets/snooze_bottom_sheet.dart';
 import 'agent_activity_screen.dart';
+import 'full_email_screen.dart';
 
 class EmailDetailScreen extends StatefulWidget {
   final Email email;
@@ -31,6 +36,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
   late Email _currentEmail;
   EmailStateDetailOutDto? _detailDto;
   bool _isLoadingDetail = false;
+  bool _busyReclassify = false;
 
   @override
   void initState() {
@@ -74,6 +80,30 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     }
   }
 
+  /// Whether the backend's classification says this email needs a reply.
+  /// The backend is the source of truth — no classification logic here, just a
+  /// read of fields it already returns (category / action types).
+  bool get _needsReply {
+    // Canonical: the backend's mutually-exclusive inbox bucket.
+    if (_currentEmail.primaryCategory == PrimaryCategory.replyRequired) return true;
+    // Fallbacks for a row not yet re-classified by the backend.
+    if (_currentEmail.analysis.actionType == 'REPLY') return true;
+    final dto = _detailDto;
+    if (dto == null) return false;
+    if (dto.primaryCategory == 'REPLY_REQUIRED') return true;
+    if (dto.finalCategory == 'REPLY_REQUIRED') return true;
+    if (dto.primaryActionType == 'REPLY') return true;
+    return dto.actions.any((a) => a.actionType == 'REPLY');
+  }
+
+  /// A short, user-facing reply status for the analysis card — or null when the
+  /// email does not need a reply (or is already done, in which case the STATUS
+  /// row covers it).
+  String? get _replyStatus {
+    if (!_needsReply || _currentEmail.userState.isCompleted) return null;
+    return 'Reply requested';
+  }
+
   Future<void> _launchTargetLink(String? url) async {
     if (url == null || url.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -100,6 +130,12 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
     final isCompleted = _currentEmail.userState.isCompleted;
     final isSnoozed = _currentEmail.isSnoozed;
     final firstAction = _detailDto?.actions.firstOrNull;
+    // Device-local reminder for this email, if any (see LocalScheduleService)
+    // — read fresh on every build, no separate listenable needed since a
+    // create/cancel here always follows with setState.
+    final pendingReminder = LocalScheduleService().pendingReminderForEmail(_currentEmail.id);
+    final deadlineAlarms =
+        LocalScheduleService().pendingDeadlineEventsForEmail(_currentEmail.id);
 
     return Scaffold(
       appBar: AppBar(
@@ -108,27 +144,31 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'EMAIL INTELLIGENCE',
+          'EMAIL DETAILS',
           style: AppTheme.brandTitle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.smart_toy_outlined, color: AppColors.warmBeige),
-            tooltip: 'Agent Processing Trace',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AgentActivityScreen(
-                    traces: analysis.traces,
-                    emailSubject: _currentEmail.subject,
-                    emailId: _currentEmail.id,
-                    controller: widget.controller,
+          // Internal multi-agent processing trace — developer/debug builds only,
+          // never shown to normal users. The reasoning data itself is untouched
+          // on the backend / API and still parsed into the model.
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.smart_toy_outlined, color: AppColors.warmBeige),
+              tooltip: 'Agent processing trace (debug)',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AgentActivityScreen(
+                      traces: analysis.traces,
+                      emailSubject: _currentEmail.subject,
+                      emailId: _currentEmail.id,
+                      controller: widget.controller,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
       body: Column(
@@ -211,7 +251,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                 const SizedBox(height: 14),
 
                 // ==========================================
-                // AGENT AMAR ANALYSIS CARD (Core Highlight)
+                // ANALYSIS CARD (Core Highlight)
                 // ==========================================
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -249,7 +289,7 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'AGENT AMAR ANALYSIS',
+                                'ANALYSIS',
                                 style: AppTheme.brandTitle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
@@ -265,17 +305,22 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                       const Divider(color: AppColors.borderLight, height: 1),
                       const SizedBox(height: 12),
 
-                      // Structured Grid
+                      // Clean, user-facing results only — category, priority,
+                      // deadline, and any action / reply status. Internal
+                      // reasoning text, agent scores, routing and the
+                      // multi-agent trace are intentionally not surfaced here.
+                      _buildClassificationRow(),
+                      const SizedBox(height: 8),
                       _buildAnalysisRow('CATEGORY', analysis.category),
                       const SizedBox(height: 8),
                       _buildAnalysisRow(
                         'PRIORITY',
-                        '${analysis.priority.displayName} (${(analysis.confidence * 100).toInt()}% confidence)',
+                        analysis.priority.displayName,
                         valueColor: isCritical ? AppColors.critical : AppColors.textPrimary,
                       ),
-                      const SizedBox(height: 8),
 
                       if (analysis.deadline != null) ...[
+                        const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -295,65 +340,54 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
                       ],
 
                       if (analysis.actionDescription != null) ...[
+                        const SizedBox(height: 8),
                         _buildAnalysisRow(
                           'ACTION REQUIRED',
                           analysis.actionDescription!,
                           valueColor: AppColors.warmBeige,
                         ),
-                        const SizedBox(height: 8),
                       ],
 
-                      const SizedBox(height: 4),
-                      Text(
-                        'REASONING SUMMARY',
-                        style: AppTheme.label(fontSize: 10, color: AppColors.textMuted),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.background.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.borderLight),
+                      if (_replyStatus != null) ...[
+                        const SizedBox(height: 8),
+                        _buildAnalysisRow(
+                          'REPLY',
+                          _replyStatus!,
+                          valueColor: AppColors.warmBeige,
                         ),
-                        child: Text(
-                          analysis.reasoningSummary,
-                          style: AppTheme.body(fontSize: 12, color: AppColors.textPrimary),
+                      ],
+
+                      if (isCompleted) ...[
+                        const SizedBox(height: 8),
+                        _buildAnalysisRow(
+                          'STATUS',
+                          'Completed',
+                          valueColor: AppColors.success,
                         ),
-                      ),
+                      ],
 
                       const SizedBox(height: 12),
                       Align(
-                        alignment: Alignment.centerRight,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AgentActivityScreen(
-                                  traces: analysis.traces,
-                                  emailSubject: _currentEmail.subject,
-                                  emailId: _currentEmail.id,
-                                  controller: widget.controller,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'View Multi-Agent Reasoning Trace',
-                                style: AppTheme.label(fontSize: 11, color: AppColors.warmBeige),
-                              ),
-                              const Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.warmBeige),
-                            ],
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _busyReclassify ? null : _changeClassification,
+                          icon: _busyReclassify
+                              ? const SizedBox(
+                                  width: 13, height: 13,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: AppColors.warmBeige))
+                              : const Icon(Icons.tune, size: 14, color: AppColors.warmBeige),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.warmBeige,
+                            side: const BorderSide(color: AppColors.border),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                           ),
+                          label: Text('Change Classification',
+                              style: AppTheme.label(fontSize: 11, color: AppColors.warmBeige)),
                         ),
                       ),
                     ],
@@ -396,10 +430,43 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                       Text(
                         _currentEmail.body,
                         style: AppTheme.body(fontSize: 13, height: 1.6),
+                        maxLines: 6,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _openFullEmail,
+                          icon: const Icon(Icons.open_in_full, size: 15),
+                          label: const Text('View Full Email'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.warmBeige,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
+
+                // AI reply suggestions — only for emails the backend flags as
+                // needing a reply (no classification logic in Flutter).
+                if (_needsReply) ...[
+                  const SizedBox(height: 14),
+                  ReplySuggestionsPanel(
+                    connectedAccountEmail: widget.controller.connectedAccountEmail,
+                    onGenerate: () =>
+                        widget.controller.generateReplySuggestions(_currentEmail.id),
+                    onSend: (body) =>
+                        widget.controller.sendReply(_currentEmail.id, body),
+                    onSent: () {
+                      _refreshEmailState();
+                      _fetchDetail();
+                    },
+                  ),
+                ],
                 const SizedBox(height: 20),
               ],
             ),
@@ -415,35 +482,73 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (isCompleted || isSnoozed) ...[
+                if (isCompleted ||
+                    isSnoozed ||
+                    pendingReminder != null ||
+                    deadlineAlarms.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 4,
                       children: [
                         if (isCompleted)
                           const Text(
                             '✓ Action Completed',
                             style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
-                        if (isCompleted && isSnoozed) const SizedBox(width: 12),
-                        if (isSnoozed) ...[
+                        if (isSnoozed)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '⏰ Snoozed until ${DateFormat('hh:mm a').format(_currentEmail.userState.snoozedUntil!)}',
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                              ),
+                              const SizedBox(width: 6),
+                              InkWell(
+                                onTap: () async {
+                                  await widget.controller.clearSnooze(_currentEmail.id);
+                                  _refreshEmailState();
+                                },
+                                child: Text(
+                                  '(Clear)',
+                                  style: AppTheme.label(fontSize: 11, color: AppColors.warmBeige),
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (pendingReminder != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '🔔 Reminder set: ${DateFormat('EEE, MMM d · hh:mm a').format(pendingReminder.scheduledAt.toLocal())}',
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                              ),
+                              const SizedBox(width: 6),
+                              InkWell(
+                                onTap: () async {
+                                  await LocalScheduleService().cancel(pendingReminder.id);
+                                  if (mounted) setState(() {});
+                                },
+                                child: Text(
+                                  '(Cancel)',
+                                  style: AppTheme.label(fontSize: 11, color: AppColors.warmBeige),
+                                ),
+                              ),
+                            ],
+                          ),
+                        // Deadline alarms are scheduled automatically from the
+                        // email's own deadline and clear themselves when the
+                        // task is done — shown, not controlled, here.
+                        if (deadlineAlarms.isNotEmpty)
                           Text(
-                            '⏰ Snoozed until ${DateFormat('hh:mm a').format(_currentEmail.userState.snoozedUntil!)}',
+                            '⏳ ${deadlineAlarms.length} deadline alarm${deadlineAlarms.length == 1 ? '' : 's'} scheduled',
                             style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
                           ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: () async {
-                              await widget.controller.clearSnooze(_currentEmail.id);
-                              _refreshEmailState();
-                            },
-                            child: Text(
-                              '(Clear)',
-                              style: AppTheme.label(fontSize: 11, color: AppColors.warmBeige),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -476,13 +581,19 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                           context,
                           email: _currentEmail,
                           onSetReminder: (time, note) async {
-                            await widget.controller.createReminder(
-                              emailId: _currentEmail.id,
-                              reminderAt: time,
-                              actionRef: firstAction?.actionRef,
-                              note: note,
-                            );
-                            _refreshEmailState();
+                            final existing = pendingReminder;
+                            if (existing != null) {
+                              await LocalScheduleService().reschedule(existing.id, time);
+                            } else {
+                              await LocalScheduleService().createReminder(
+                                emailId: _currentEmail.id,
+                                label: note?.trim().isNotEmpty == true
+                                    ? note!.trim()
+                                    : _currentEmail.subject,
+                                scheduledAt: time,
+                              );
+                            }
+                            if (mounted) setState(() {});
                           },
                         );
                       },
@@ -516,20 +627,28 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
                     IconButton.filledTonal(
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        await widget.controller.completeAction(
-                          _currentEmail.id,
-                          firstAction?.actionRef ?? 'act_001',
-                        );
-                        _refreshEmailState();
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('Action marked as completed on FastAPI backend!')),
-                        );
+                        if (isCompleted) {
+                          await widget.controller.reopenEmail(_currentEmail.id);
+                          _refreshEmailState();
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('Reopened — back on your dashboard.')));
+                          return;
+                        }
+                        final updated =
+                            await widget.controller.markComplete(_currentEmail.id);
+                        if (updated != null && mounted) {
+                          setState(() => _currentEmail = updated);
+                        } else {
+                          _refreshEmailState();
+                        }
+                        messenger.showSnackBar(const SnackBar(
+                            content: Text('Marked as done. Removed from your dashboard.')));
                       },
                       icon: Icon(
                         isCompleted ? Icons.check_circle : Icons.check_circle_outline,
                         color: isCompleted ? AppColors.success : AppColors.textPrimary,
                       ),
-                      tooltip: 'Mark Complete',
+                      tooltip: isCompleted ? 'Reopen' : 'Mark Done',
                       style: IconButton.styleFrom(
                         backgroundColor: isCompleted ? AppColors.success.withValues(alpha: 0.2) : AppColors.secondarySurface,
                       ),
@@ -561,6 +680,74 @@ class _EmailDetailScreenState extends State<EmailDetailScreen> {
         ),
       ],
     );
+  }
+
+  /// The canonical primary classification the whole UI filters on, plus a marker
+  /// when the user has manually corrected it.
+  Widget _buildClassificationRow() {
+    final corrected = _currentEmail.primaryCategoryUserCorrected;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('CLASSIFICATION',
+            style: AppTheme.label(fontSize: 11, color: AppColors.textMuted)),
+        Flexible(
+          child: Text(
+            corrected
+                ? '${primaryCategoryLabel(_currentEmail.primaryCategory)} · corrected'
+                : primaryCategoryLabel(_currentEmail.primaryCategory),
+            textAlign: TextAlign.right,
+            style: AppTheme.bodyMedium(
+              fontSize: 12,
+              color: corrected ? AppColors.warmBeige : AppColors.textPrimary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _changeClassification() async {
+    final picked = await ClassificationPickerSheet.show(
+      context,
+      current: _currentEmail.primaryCategory,
+    );
+    if (!mounted || picked == null || picked == _currentEmail.primaryCategory) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busyReclassify = true);
+    try {
+      final updated = await widget.controller
+          .submitClassificationFeedback(_currentEmail.id, picked);
+      if (!mounted) return;
+      setState(() => _currentEmail = updated);
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+            'Moved to ${primaryCategoryLabel(updated.primaryCategory)}.'),
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Could not update the classification. Please try again.'),
+      ));
+    } finally {
+      if (mounted) setState(() => _busyReclassify = false);
+    }
+  }
+
+  void _openFullEmail() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FullEmailScreen(
+          emailId: _currentEmail.id,
+          controller: widget.controller,
+        ),
+      ),
+    ).then((_) {
+      _refreshEmailState();
+      _fetchDetail();
+    });
   }
 
   String _getInitials(String name) {

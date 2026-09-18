@@ -25,7 +25,7 @@ class DeadlineRepository:
         return list(self.session.execute(stmt).scalars().all())
 
     def list_upcoming(
-        self, *, within_hours: int | None = None, limit: int = 100
+        self, *, user_pk: int | None = None, within_hours: int | None = None, limit: int = 100
     ) -> list[tuple[DeadlineRecord, EmailRecord]]:
         now = datetime.now(timezone.utc)
         stmt = (
@@ -39,6 +39,8 @@ class DeadlineRepository:
             .order_by(DeadlineRecord.deadline_datetime)
             .limit(max(1, min(limit, 500)))
         )
+        if user_pk is not None:
+            stmt = stmt.where(EmailRecord.user_pk == user_pk)
         if within_hours is not None:
             horizon = now + timedelta(hours=within_hours)
             stmt = stmt.where(DeadlineRecord.deadline_datetime <= horizon)
@@ -48,7 +50,9 @@ class DeadlineRepository:
         stmt = select(DeadlineRecord).where(DeadlineRecord.is_monitoring.is_(True))
         return list(self.session.execute(stmt).scalars().all())
 
-    def list_monitored_with_email(self) -> list[tuple[DeadlineRecord, EmailRecord]]:
+    def list_monitored_with_email(
+        self, *, user_pk: int | None = None
+    ) -> list[tuple[DeadlineRecord, EmailRecord]]:
         """Every actively-monitored deadline + its email (actions eager-loaded)."""
         stmt = (
             select(DeadlineRecord, EmailRecord)
@@ -57,9 +61,13 @@ class DeadlineRepository:
             .options(selectinload(EmailRecord.actions))
             .order_by(DeadlineRecord.deadline_datetime, DeadlineRecord.id)
         )
+        if user_pk is not None:
+            stmt = stmt.where(EmailRecord.user_pk == user_pk)
         return [tuple(row) for row in self.session.execute(stmt).all()]
 
-    def list_auto_monitor_candidates(self) -> list[tuple[DeadlineRecord, EmailRecord]]:
+    def list_auto_monitor_candidates(
+        self, *, user_pk: int | None = None
+    ) -> list[tuple[DeadlineRecord, EmailRecord]]:
         """Deadlines that *should* be monitored but aren't yet:
         ``routing.monitor`` was set, the deadline is still open, and monitoring
         was never explicitly stopped. A concrete datetime OR an ambiguous
@@ -75,6 +83,8 @@ class DeadlineRepository:
                 DeadlineRecord.is_past.is_(False),
             )
         )
+        if user_pk is not None:
+            stmt = stmt.where(EmailRecord.user_pk == user_pk)
         rows = [tuple(row) for row in self.session.execute(stmt).all()]
         return [
             (d, e) for d, e in rows

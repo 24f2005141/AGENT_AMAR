@@ -13,8 +13,16 @@ class ApiException implements Exception {
     this.rawBody,
   });
 
+  /// The application session is missing / expired / revoked (Phase 15) — the
+  /// client should return the user to the login screen.
+  bool get isAuthExpired =>
+      errorType == 'AuthRequiredError' ||
+      (statusCode == 401 && (errorType == null || errorType!.isEmpty));
+
+  /// The current user's Gmail authorization is missing / could not be refreshed
+  /// — the app session is still fine; prompt a "reconnect Gmail".
   bool get isGmailNotConnected =>
-      statusCode == 401 || errorType == 'GmailNotConnectedError';
+      errorType == 'GmailNotConnectedError' || errorType == 'TokenRefreshError';
 
   bool get isNotFound => statusCode == 404;
 
@@ -64,7 +72,7 @@ class ApiException implements Exception {
   factory ApiException.networkError(dynamic error) {
     return ApiException(
       statusCode: 0,
-      message: 'Unable to connect to AGENT AMAR backend. Please verify FastAPI is running at the configured Base URL.',
+      message: 'Unable to connect to the Sorted backend. Please verify FastAPI is running at the configured Base URL.',
       errorType: 'NetworkError',
       rawBody: error.toString(),
     );
@@ -73,7 +81,7 @@ class ApiException implements Exception {
   factory ApiException.timeout() {
     return ApiException(
       statusCode: 408,
-      message: 'Request timed out while contacting AGENT AMAR backend.',
+      message: 'Request timed out while contacting the Sorted backend.',
       errorType: 'Timeout',
     );
   }

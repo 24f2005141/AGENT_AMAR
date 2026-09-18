@@ -25,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.sanitization import mask_sensitive
 from app.db.models import DeadlineRecord, EmailRecord
 from app.repositories import (
     DeadlineRepository,
@@ -32,6 +33,7 @@ from app.repositories import (
     NotificationRepository,
     ReminderRepository,
 )
+from app.services.push_service import dispatch_unpushed
 from app.services.escalation_policy import (
     ALARM_ELIGIBLE_PRIORITIES,
     EscalationLevel,
@@ -82,8 +84,15 @@ def _human(delta: timedelta) -> str:
 
 
 class DeadlineMonitorService:
-    def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        user_pk: int | None = None,
+        settings: Settings | None = None,
+    ) -> None:
         self.session = session
+        self.user_pk = user_pk
         self.settings = settings or get_settings()
         self.emails = EmailRepository(session)
         self.deadlines = DeadlineRepository(session)
@@ -108,7 +117,7 @@ class DeadlineMonitorService:
 
         self._auto_start_monitoring()
 
-        for dl, email in self.deadlines.list_monitored_with_email():
+        for dl, email in self.deadlines.list_monitored_with_email(user_pk=self.user_pk):
             result.deadlines_evaluated += 1
             decision = self._evaluate_deadline(dl, email, now)
             result.results.append(decision)
@@ -119,6 +128,11 @@ class DeadlineMonitorService:
             self._process_due_reminders(now, result)
 
         self.session.commit()
+        if result.notifications_created:
+            try:
+                dispatch_unpushed(self.user_pk)
+            except Exception:  # noqa: BLE001 - push must never break monitoring
+                pass
         return result
 
     def run_reminder_check(self, now: datetime | None = None) -> MonitorRunResult:
@@ -131,10 +145,15 @@ class DeadlineMonitorService:
         result = MonitorRunResult(checked_at=now)
         self._process_due_reminders(now, result)
         self.session.commit()
+        if result.notifications_created:
+            try:
+                dispatch_unpushed(self.user_pk)
+            except Exception:  # noqa: BLE001 - push must never break monitoring
+                pass
         return result
 
     def _process_due_reminders(self, now: datetime, result: MonitorRunResult) -> None:
-        due = self.reminders.list_due(now)
+        due = self.reminders.list_due(now, user_pk=self.user_pk)
         result.reminders_evaluated = len(due)
         for reminder in due:
             decision = self._fire_reminder(reminder, now)
@@ -147,7 +166,7 @@ class DeadlineMonitorService:
     def _auto_start_monitoring(self) -> None:
         """Begin monitoring for deadlines the orchestrator flagged
         ``routing.monitor`` (Deadline Monitoring.md "When monitoring starts")."""
-        for dl, _email in self.deadlines.list_auto_monitor_candidates():
+        for dl, _email in self.deadlines.list_auto_monitor_candidates(user_pk=self.user_pk):
             self.deadlines.start_monitoring(dl)
 
     # -- per-deadline evaluation -----------------------------------
@@ -281,11 +300,13 @@ class DeadlineMonitorService:
             self.session.flush()
             return MonitorDecision(email.email_id, "REMINDER_SKIPPED",
                                    "email/action already handled before the reminder time")
+        # The reminder note is user free text — mask any OTP / secret before it
+        # goes into a notification payload (Phase 14).
         n = self.notifications.create(
             email_pk=email.id, reminder_pk=reminder.id,
             notification_type="user_reminder",
             reminder_level="NORMAL", severity="NORMAL",
-            detail=reminder.note or "you asked to be reminded about this email",
+            detail=mask_sensitive(reminder.note) or "you asked to be reminded about this email",
         )
         reminder.status = "TRIGGERED"
         reminder.triggered_at = now

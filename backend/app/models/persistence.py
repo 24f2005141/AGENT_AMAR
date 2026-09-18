@@ -93,6 +93,16 @@ class EmailStateOut(BaseModel):
     received_at: datetime | None = None
 
     final_category: str
+    #: The single mutually-exclusive inbox bucket — the UI filters on THIS, not on
+    #: action_required / priority_level: REPLY_REQUIRED | ACTION_REQUIRED |
+    #: IMPORTANT | LOW_PRIORITY. This is the CURRENT value: the user's manual
+    #: correction when they made one, else the automated derivation.
+    primary_category: str = "LOW_PRIORITY"
+    #: The latest AUTOMATED derivation, kept even when the user has overridden
+    #: primary_category (original prediction, for training / audit / "revert").
+    auto_primary_category: str = "LOW_PRIORITY"
+    #: "auto" (pipeline decided) | "user" (manually corrected via feedback).
+    primary_category_source: str = "auto"
     category_confidence: float | None = None
     priority_level: str
     priority_score: int
@@ -109,8 +119,16 @@ class EmailStateOut(BaseModel):
     action_required: bool = False
     is_completed: bool = False
     completed_at: datetime | None = None
+    #: "auto" (derived from action statuses) | "user" (explicitly resolved — a
+    #: Gmail sync / reprocess will never revert it).
+    completion_source: str = "auto"
     snoozed_until: datetime | None = None
     needs_human_review: bool = False
+    #: Whether the email still needs the user's attention (homepage feed). A
+    #: derived, mutually-consistent view of is_completed / is_viewed /
+    #: snoozed_until / primary_category — see ``EmailRecord.is_active``. Filter
+    #: the list with ``GET /api/v1/emails?active=true``.
+    is_active: bool = True
 
     folder_label: str
     should_notify: bool = False
@@ -148,6 +166,13 @@ class SnoozeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     snoozed_until: datetime
+
+
+class ClearAcknowledgedResult(BaseModel):
+    """Result of ``POST /api/v1/emails/clear-acknowledged`` — how many
+    non-actionable emails were acknowledged. Nothing is deleted; no Gmail call."""
+
+    acknowledged: int = 0
 
 
 class PersistedRef(BaseModel):

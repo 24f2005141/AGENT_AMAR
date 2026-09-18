@@ -24,6 +24,7 @@ from typing import Any
 import httpx  # always installed (fastapi.testclient); used by the Ollama client
 
 from app.core.config import Settings
+from app.services.llm_concurrency import LLMBusyError, inference_slot
 
 
 class LLMError(Exception):
@@ -244,11 +245,17 @@ class OllamaLLMClient(LLMClient):
             "format": "json",
             "options": {"num_predict": max_tokens},
         }
+        # One inference at a time on the shared private box (see
+        # llm_concurrency): queueing beats thrashing a limited-RAM host, and a
+        # shed request degrades to the local ML result rather than failing.
         try:
-            resp = httpx.post(
-                f"{self._base_url}/api/generate", json=payload, timeout=self._timeout
-            )
-            resp.raise_for_status()
+            with inference_slot():
+                resp = httpx.post(
+                    f"{self._base_url}/api/generate", json=payload, timeout=self._timeout
+                )
+                resp.raise_for_status()
+        except LLMBusyError as exc:
+            raise LLMUnavailableError(str(exc)) from exc
         except httpx.TimeoutException as exc:
             raise LLMUnavailableError("Ollama request timed out.") from exc
         except httpx.HTTPStatusError as exc:
@@ -272,23 +279,29 @@ class OllamaLLMClient(LLMClient):
         return _extract_json_object(text)
 
 
-def build_llm_client(settings: Settings) -> LLMClient:
-    """Factory: pick a provider from settings. Unknown / unset -> NullLLMClient."""
+def build_llm_client(settings: Settings, *, timeout: float | None = None) -> LLMClient:
+    """Factory: pick a provider from settings. Unknown / unset -> NullLLMClient.
+
+    ``timeout`` overrides ``settings.llm_timeout_seconds`` for this client only
+    (e.g. reply drafting needs longer than a small classification call). The
+    provider selection is unchanged — no provider-specific code leaks to callers.
+    """
     provider = (settings.llm_provider or "none").strip().lower()
+    request_timeout = timeout if timeout and timeout > 0 else settings.llm_timeout_seconds
     if provider == "anthropic":
         return AnthropicLLMClient(
-            settings.llm_api_key, settings.llm_model, settings.llm_timeout_seconds
+            settings.llm_api_key, settings.llm_model, request_timeout
         )
     if provider == "openai":
         return OpenAILLMClient(
-            settings.llm_api_key, settings.llm_model, settings.llm_timeout_seconds
+            settings.llm_api_key, settings.llm_model, request_timeout
         )
     if provider == "gemini":
         return GeminiLLMClient(
-            settings.llm_api_key, settings.llm_model, settings.llm_timeout_seconds
+            settings.llm_api_key, settings.llm_model, request_timeout
         )
     if provider == "ollama":
         return OllamaLLMClient(
-            settings.llm_model, settings.ollama_base_url, settings.llm_timeout_seconds
+            settings.llm_model, settings.ollama_base_url, request_timeout
         )
     return NullLLMClient()

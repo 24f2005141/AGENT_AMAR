@@ -2,8 +2,19 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- User-set reminders (device-scheduled, see LocalReminderService):
+         SCHEDULE_EXACT_ALARM lets a granted user ask for an exact-time alarm
+         on Android 12+ (the general permission — NOT USE_EXACT_ALARM, which
+         Play Store restricts to alarm-clock/calendar-category apps). Without
+         this granted, reminders still fire via an inexact, OS-batched alarm
+         (see NotificationService._preferredAndroidScheduleMode) — never
+         "only when the app reopens". RECEIVE_BOOT_COMPLETED lets the
+         receivers below reschedule pending reminders after a device
+         restart, without the user having to open Sorted first. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="agent_amar"
+        android:label="Sorted"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -28,12 +39,133 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Phase 17 — OAuth sign-in deep link. After Google auth the backend
+                 302-redirects the system browser to
+                 agentamar://auth/callback?code=<one-time>&state=<state>.
+                 launchMode=singleTop (above) delivers it to a running / backgrounded
+                 app via onNewIntent; a cold start receives it via getInitialLink().
+                 Scoped to exactly this scheme + host + path — no broad VIEW filter.
+                 A future HTTPS Android App Link is an ADDITIONAL <intent-filter>
+                 here with android:autoVerify="true" and an https <data> element. -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="agentamar"
+                    android:host="auth"
+                    android:pathPrefix="/callback"/>
+            </intent-filter>
+
+            <!-- Home-screen widget taps. Same scheme as the auth callback so
+                 there is only ONE deep-link surface; the app routes on host
+                 (`widget`) through its existing navigation — the widgets do
+                 not own a second navigation architecture.
+                   agentamar://widget/email?id=<email_id>
+                   agentamar://widget/tab?name=inbox|actions|replies|deadlines -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="agentamar"
+                    android:host="widget"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Firebase Cloud Messaging (Phase 16): the channel + icon used when a
+             push arrives while the app is backgrounded / terminated. Harmless if
+             Firebase is not configured on this build. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="agent_amar_urgent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
+        <!-- flutter_local_notifications: native receivers that let a
+             scheduled reminder alarm fire and be rescheduled entirely on the
+             device — no Dart/Flutter engine needs to be running. Without
+             these declared here, zonedSchedule()'d alarms never actually
+             fire (ScheduledNotificationReceiver), and a device restart
+             clears every pending alarm with nothing to restore them
+             (ScheduledNotificationBootReceiver) until the user reopens the
+             app — this is what makes a reboot NOT depend on that. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- Sorted home-screen widgets. Real AppWidgetProviders, so they show
+             up in the launcher's widget picker. Each renders the snapshot the
+             app publishes locally (see HomeWidgetService) — none of them ever
+             performs network I/O, and all use updatePeriodMillis=0 (push
+             updates only, no polling timer) to stay battery-cheap. -->
+        <receiver android:name=".widgets.FocusNowWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_focus_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_focus_now_info" />
+        </receiver>
+
+        <receiver android:name=".widgets.AttentionDashboardWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_dashboard_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_attention_dashboard_info" />
+        </receiver>
+
+        <receiver android:name=".widgets.DeadlineCountdownWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_deadline_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_deadline_countdown_info" />
+        </receiver>
+
+        <receiver android:name=".widgets.QuickActionsWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_quick_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_actions_info" />
+        </receiver>
+
+        <!-- Background callback receiver used by the Focus Now "Done" button
+             (home_widget). It hands the tap to a Dart callback; the completion
+             is recorded locally and flushed to the backend by the app. -->
+        <receiver android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.BACKGROUND" />
+            </intent-filter>
+        </receiver>
+        <service android:name="es.antonborri.home_widget.HomeWidgetBackgroundService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -44,6 +176,19 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+ package visibility: without this, url_launcher cannot
+             resolve a browser to open the Google OAuth consent page
+             (logcat: "UrlLauncher: component name for <url> is null"). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="http"/>
         </intent>
     </queries>
 </manifest>

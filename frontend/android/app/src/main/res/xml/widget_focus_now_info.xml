@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Focus Now: 4x2 default, resizable down to 3x1 and up — covers the common
+     launcher grids. updatePeriodMillis=0: the widget is push-updated by the
+     app when local state changes, never on a polling timer (battery). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="70dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_focus_now"
+    android:previewLayout="@layout/widget_focus_now"
+    android:resizeMode="horizontal|vertical"
+    android:description="@string/widget_focus_description"
+    android:widgetCategory="home_screen" />

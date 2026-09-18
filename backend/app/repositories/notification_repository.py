@@ -113,8 +113,15 @@ class NotificationRepository:
 
     # -- listing ----------------------------------------------------
 
-    def get(self, notification_id: int) -> NotificationRecord | None:
-        return self.session.get(NotificationRecord, notification_id)
+    def get(
+        self, notification_id: int, *, user_pk: int | None = None
+    ) -> NotificationRecord | None:
+        note = self.session.get(NotificationRecord, notification_id)
+        if note is None:
+            return None
+        if user_pk is not None and (note.email is None or note.email.user_pk != user_pk):
+            return None
+        return note
 
     def list_by_email(self, email_pk: int) -> list[NotificationRecord]:
         stmt = (
@@ -136,6 +143,7 @@ class NotificationRepository:
     def list(
         self,
         *,
+        user_pk: int | None = None,
         status: str | None = None,
         severity: str | None = None,
         notification_type: str | None = None,
@@ -146,10 +154,12 @@ class NotificationRepository:
         offset: int = 0,
     ) -> list[NotificationRecord]:
         stmt = select(NotificationRecord).options(selectinload(NotificationRecord.email))
+        if user_pk is not None or email_id is not None:
+            stmt = stmt.join(EmailRecord, NotificationRecord.email_pk == EmailRecord.id)
+        if user_pk is not None:
+            stmt = stmt.where(EmailRecord.user_pk == user_pk)
         if email_id is not None:
-            stmt = stmt.join(EmailRecord, NotificationRecord.email_pk == EmailRecord.id).where(
-                EmailRecord.email_id == email_id
-            )
+            stmt = stmt.where(EmailRecord.email_id == email_id)
         if status is not None:
             stmt = stmt.where(NotificationRecord.status == status.upper())
         if severity is not None:

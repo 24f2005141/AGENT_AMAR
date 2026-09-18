@@ -30,6 +30,7 @@ from app.db.models import (
     NotificationRecord,
     ProcessingRun,
 )
+from app.core.sanitization import mask_sensitive
 from app.models.agent_output import AgentOutput
 from app.models.decision import FinalDecision
 from app.models.email import NormalizedEmail
@@ -40,6 +41,8 @@ from app.repositories import (
     NotificationRepository,
     ProcessingRepository,
 )
+from app.services.audit_service import audit_record, audit_record_many
+from app.services.push_service import dispatch_unpushed
 
 # routing.notify already encodes User Preferences §3 (notify at HIGH+); we only
 # add the "don't duplicate" guard here.
@@ -47,8 +50,9 @@ _NOTIFY_LEVELS = {"HIGH", "URGENT", "CRITICAL"}
 
 
 class PersistenceService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, *, user_pk: int | None = None) -> None:
         self.session = session
+        self.user_pk = user_pk
         self.emails = EmailRepository(session)
         self.actions = ActionRepository(session)
         self.deadlines = DeadlineRepository(session)
@@ -67,8 +71,15 @@ class PersistenceService:
         record = self.emails.get_by_email_id(fd.email_id, with_children=True)
         created = record is None
         if created:
-            record = EmailRecord(email_id=fd.email_id)
+            record = EmailRecord(email_id=fd.email_id, user_pk=self.user_pk)
             self.emails.add(record)
+        elif record.user_pk is None and self.user_pk is not None:
+            # adopt a legacy unowned row on first reprocess under a real user
+            record.user_pk = self.user_pk
+
+        before_actions = {a.action_ref for a in record.actions}
+        before_deadlines = {d.deadline_ref for d in record.deadlines}
+        had_notification = bool(record.notifications)
 
         self._apply_identity_and_metadata(record, normalized, fd)
         self._apply_system_analysis(record, fd, now)
@@ -80,6 +91,45 @@ class PersistenceService:
 
         self.session.commit()
         self.session.refresh(record)
+
+        # Phase 14 — tamper-evident audit trail (non-sensitive metadata only,
+        # one atomic append for the whole pass).
+        eid = record.email_id
+        uid = record.user_pk
+        events: list[dict] = []
+        if created:
+            events.append({"event_type": "EMAIL_INGESTED", "resource_type": "email",
+                           "resource_id": eid, "user_pk": uid,
+                           "detail": {"source": record.source}})
+        events.append({"event_type": "EMAIL_PROCESSED", "resource_type": "email",
+                       "resource_id": eid, "user_pk": uid,
+                       "detail": {"category": record.final_category,
+                                  "priority": record.priority_level,
+                                  "run": len(record.processing_runs)}})
+        for a in record.actions:
+            if a.action_ref not in before_actions:
+                events.append({"event_type": "ACTION_CREATED", "resource_type": "action",
+                               "resource_id": f"{eid}/{a.action_ref}", "user_pk": uid,
+                               "detail": {"type": a.action_type, "blocking": a.blocking}})
+        for d in record.deadlines:
+            if d.deadline_ref not in before_deadlines:
+                events.append({"event_type": "DEADLINE_CREATED", "resource_type": "deadline",
+                               "resource_id": f"{eid}/{d.deadline_ref}", "user_pk": uid,
+                               "detail": {"ambiguous": d.is_ambiguous, "is_past": d.is_past}})
+        new_notification = bool(record.notifications) and not had_notification
+        if new_notification:
+            events.append({"event_type": "NOTIFICATION_SENT", "resource_type": "notification",
+                           "resource_id": eid, "user_pk": uid,
+                           "detail": {"type": record.notifications[-1].notification_type}})
+        audit_record_many(events)
+
+        # Phase 16 — backend push (own session, non-fatal). Fire only when this
+        # pass created a notification so a re-process never re-pushes.
+        if new_notification and uid is not None:
+            try:
+                dispatch_unpushed(uid)
+            except Exception:  # noqa: BLE001 — push must never break persistence
+                pass
         return record
 
     # -- field mapping ------------------------------------------------
@@ -102,6 +152,14 @@ class PersistenceService:
     @staticmethod
     def _apply_system_analysis(record: EmailRecord, fd: FinalDecision, now: datetime) -> None:
         record.final_category = fd.final_category
+        # Phase 18: the automated derivation always refreshes ``auto_primary_category``;
+        # the canonical ``primary_category`` only follows it while the user has not
+        # manually corrected this email (same "user state is preserved" rule as
+        # is_viewed / is_completed).
+        auto_primary = str(getattr(fd.primary_category, "value", fd.primary_category))
+        record.auto_primary_category = auto_primary
+        if getattr(record, "primary_category_source", "auto") != "user":
+            record.primary_category = auto_primary
         record.category_confidence = fd.category_confidence
         record.priority_level = str(fd.priority_level)
         record.priority_score = int(fd.priority_score)
@@ -161,21 +219,24 @@ class PersistenceService:
 
     @staticmethod
     def _recompute_completion(record: EmailRecord, now: datetime) -> None:
-        """Derive ``is_completed`` from the actions' user-set statuses."""
-        if not record.action_required:
-            done = False
-        elif not record.actions:
-            done = False
-        else:
-            blocking = [a for a in record.actions if a.blocking]
-            relevant = blocking or record.actions
-            done = all(a.status in ("COMPLETED", "DISMISSED") for a in relevant)
-        if done and not record.is_completed:
+        """Derive ``is_completed`` from the actions' user-set statuses.
+
+        **Promote-only.** Auto-completion (all blocking actions done) may set
+        ``is_completed`` true, but this never sets it back to false — an email the
+        user has resolved (``completion_source == "user"``) or that auto-completed
+        on a previous pass must not be un-completed by a later Gmail sync that
+        re-runs the agents and produces a slightly different action set. Undoing a
+        completion is only ever an explicit user action (see ``reopen``).
+        """
+        if getattr(record, "completion_source", "auto") == "user" or record.is_completed:
+            return
+        if not record.action_required or not record.actions:
+            return
+        blocking = [a for a in record.actions if a.blocking]
+        relevant = blocking or record.actions
+        if all(a.status in ("COMPLETED", "DISMISSED") for a in relevant):
             record.is_completed = True
             record.completed_at = now
-        elif not done and record.is_completed:
-            record.is_completed = False
-            record.completed_at = None
 
     def _append_processing_run(
         self,
@@ -193,11 +254,19 @@ class PersistenceService:
             priority_level=str(fd.priority_level),
             priority_score=int(fd.priority_score),
             needs_human_review=bool(fd.needs_human_review),
-            summary=envelope.reasoning_summary or None,
+            # sanitise the free-text analysis metadata before it is persisted —
+            # an OTP / token quoted by an agent must not land in the DB / logs.
+            summary=mask_sensitive(envelope.reasoning_summary) or None,
             agent_trace=[t.model_dump() for t in fd.agent_trace],
-            conflicts_resolved=[c.model_dump() for c in fd.conflicts_resolved],
-            review_reasons=list(fd.review_reasons),
-            errors=[e.model_dump() for e in envelope.errors],
+            conflicts_resolved=[
+                {**c.model_dump(), "detail": mask_sensitive(c.model_dump().get("detail"))}
+                for c in fd.conflicts_resolved
+            ],
+            review_reasons=[mask_sensitive(r) for r in fd.review_reasons],
+            errors=[
+                {**e.model_dump(), "message": mask_sensitive(e.model_dump().get("message"))}
+                for e in envelope.errors
+            ],
         )
         record.processing_runs.append(run)
         self.session.flush()
@@ -219,19 +288,27 @@ class PersistenceService:
     # -- user-state mutations (called by the state endpoints) --------
 
     def mark_viewed(self, email_id: str) -> EmailRecord | None:
-        record = self.emails.get_by_email_id(email_id, with_children=True)
-        if record is None:
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
             return None
-        if not record.is_viewed:
+        newly_viewed = not record.is_viewed
+        if newly_viewed:
             record.is_viewed = True
             record.viewed_at = datetime.now(timezone.utc)
         self.session.commit()
         self.session.refresh(record)
+        if newly_viewed:
+            audit_record("EMAIL_VIEWED", "email", resource_id=record.email_id,
+                         user_pk=record.user_pk)
         return record
 
     def snooze(self, email_id: str, until: datetime) -> EmailRecord | None:
-        record = self.emails.get_by_email_id(email_id, with_children=True)
-        if record is None:
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
             return None
         if until.tzinfo is None:
             until = until.replace(tzinfo=timezone.utc)
@@ -243,19 +320,126 @@ class PersistenceService:
     def clear_snooze(self, email_id: str) -> EmailRecord | None:
         """Remove an active snooze (the email becomes eligible for escalation
         again immediately). No-op if it was not snoozed."""
-        record = self.emails.get_by_email_id(email_id, with_children=True)
-        if record is None:
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
             return None
         record.snoozed_until = None
         self.session.commit()
         self.session.refresh(record)
         return record
 
+    def complete_reply(self, email_id: str) -> EmailRecord | None:
+        """Mark an email done because the user has sent a reply.
+
+        Completes every pending ``REPLY`` action, then — sending the reply
+        fulfils the email's reply obligation — marks the email itself
+        ``is_completed`` unless it still has non-reply actions the user must
+        handle. Idempotent. Returns the refreshed record (``None`` if unknown /
+        not owned by this user)."""
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
+            return None
+        now = datetime.now(timezone.utc)
+        for action in record.actions:
+            if (action.action_type or "").upper() == "REPLY" and action.status == "PENDING":
+                self.actions.set_status(action, "COMPLETED")
+        self._recompute_completion(record, now)
+        if not record.is_completed:
+            other_pending = any(
+                a.status == "PENDING" and (a.action_type or "").upper() != "REPLY"
+                for a in record.actions
+            )
+            if not other_pending:
+                record.is_completed = True
+                record.completed_at = now
+                record.completion_source = "user"
+        self.session.commit()
+        self.session.refresh(record)
+        return record
+
+    def mark_complete(self, email_id: str) -> EmailRecord | None:
+        """Explicitly resolve the whole email (the "mark done" / tick action).
+
+        Completes **every** pending action (not just ``act_001``), sets
+        ``is_completed`` + ``completion_source = "user"`` so a later Gmail sync /
+        reprocess can never revert it, and stamps ``completed_at``. Idempotent —
+        a second call is a no-op. Returns ``None`` if the email is unknown / not
+        owned by this user."""
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
+            return None
+        now = datetime.now(timezone.utc)
+        for action in record.actions:
+            if action.status == "PENDING":
+                self.actions.set_status(action, "COMPLETED")
+        newly = not record.is_completed
+        record.is_completed = True
+        if record.completed_at is None:
+            record.completed_at = now
+        record.completion_source = "user"
+        self.session.commit()
+        self.session.refresh(record)
+        if newly:
+            audit_record("EMAIL_RESOLVED", "email", resource_id=record.email_id,
+                         user_pk=record.user_pk, detail={"via": "user"})
+        return record
+
+    def reopen(self, email_id: str) -> EmailRecord | None:
+        """Undo a completion (explicit user action / "undo"). Reverts
+        ``is_completed`` and hands the email back to auto-derivation."""
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
+            return None
+        record.is_completed = False
+        record.completed_at = None
+        record.completion_source = "auto"
+        self.session.commit()
+        self.session.refresh(record)
+        return record
+
+    def clear_acknowledged(self) -> int:
+        """Bulk-acknowledge every *active, non-actionable* email for this user.
+
+        Marks ``is_viewed`` on `IMPORTANT` / `LOW_PRIORITY` emails that are not
+        completed and not snoozed — the "Clear Resolved / tidy my dashboard"
+        action. **Never** touches `REPLY_REQUIRED` / `ACTION_REQUIRED` (an
+        unresolved task is never silently completed) and never deletes anything.
+        Idempotent — returns the number of rows actually changed."""
+        now = datetime.now(timezone.utc)
+        rows = self.emails.list(
+            user_pk=self.user_pk,
+            primary_category=None,
+            active=True,
+            limit=500,
+            now=now,
+        )
+        changed = 0
+        for record in rows:
+            if record.primary_category not in ("IMPORTANT", "LOW_PRIORITY"):
+                continue
+            if not record.is_viewed:
+                record.is_viewed = True
+                record.viewed_at = now
+                changed += 1
+        if changed:
+            self.session.commit()
+        return changed
+
     def set_action_status(
         self, email_id: str, action_ref: str, status: str
     ) -> tuple[EmailRecord, ActionRecord] | None:
-        record = self.emails.get_by_email_id(email_id, with_children=True)
-        if record is None:
+        record = self.emails.get_by_email_id(
+            email_id, user_pk=self.user_pk, with_children=True
+        )
+        if record is None or record.is_spam:
             return None
         action = next((a for a in record.actions if a.action_ref == action_ref), None)
         if action is None:

@@ -78,7 +78,7 @@ class DeadlinesScreen extends StatelessWidget {
                     ...todayItems.map((e) => DeadlineCard(
                           email: e,
                           onOpen: () => _openEmail(context, e),
-                          onMarkDone: () => controller.completeAction(e.id),
+                          onMarkDone: () => controller.markComplete(e.id),
                         )),
                     const SizedBox(height: 16),
                   ],
@@ -88,7 +88,7 @@ class DeadlinesScreen extends StatelessWidget {
                     ...tomorrowItems.map((e) => DeadlineCard(
                           email: e,
                           onOpen: () => _openEmail(context, e),
-                          onMarkDone: () => controller.completeAction(e.id),
+                          onMarkDone: () => controller.markComplete(e.id),
                         )),
                     const SizedBox(height: 16),
                   ],
@@ -98,7 +98,7 @@ class DeadlinesScreen extends StatelessWidget {
                     ...thisWeekItems.map((e) => DeadlineCard(
                           email: e,
                           onOpen: () => _openEmail(context, e),
-                          onMarkDone: () => controller.completeAction(e.id),
+                          onMarkDone: () => controller.markComplete(e.id),
                         )),
                     const SizedBox(height: 16),
                   ],
@@ -108,7 +108,7 @@ class DeadlinesScreen extends StatelessWidget {
                     ...laterItems.map((e) => DeadlineCard(
                           email: e,
                           onOpen: () => _openEmail(context, e),
-                          onMarkDone: () => controller.completeAction(e.id),
+                          onMarkDone: () => controller.markComplete(e.id),
                         )),
                     const SizedBox(height: 16),
                   ],

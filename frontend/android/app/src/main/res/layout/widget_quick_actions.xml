@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- QUICK ACTIONS — static shortcuts straight into a Sorted route. No data,
+     no refresh, no sync trigger (see the widget notes in the README). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_background"
+    android:padding="10dp"
+    android:baselineAligned="false">
+
+    <TextView
+        android:id="@+id/quick_inbox"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="6dp"
+        android:gravity="center"
+        android:background="@drawable/widget_button"
+        android:text="@string/widget_inbox"
+        android:textColor="#F0F4F8"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/quick_actions"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="6dp"
+        android:gravity="center"
+        android:background="@drawable/widget_button"
+        android:text="@string/widget_actions"
+        android:textColor="#FF6B6B"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/quick_replies"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="6dp"
+        android:gravity="center"
+        android:background="@drawable/widget_button"
+        android:text="@string/widget_replies"
+        android:textColor="#6BA8FF"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/quick_deadlines"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:background="@drawable/widget_button"
+        android:text="@string/widget_deadlines"
+        android:textColor="#E8C170"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+</LinearLayout>

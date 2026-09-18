@@ -16,6 +16,23 @@ from tests.triage_helpers import make_email
 
 _NOW = datetime(2026, 8, 28, 12, 0, tzinfo=timezone.utc)
 
+# Phase 15: the sub the conftest ``default_user`` autouse fixture seeds. Helpers
+# that persist data via the API-scoped services need to own it as that user.
+DEFAULT_TEST_SUB = "test-sub-default"
+
+
+def default_user_pk(db) -> int:
+    """id of the conftest default test user (created if a test bypassed the fixture)."""
+    from app.db.models import User
+
+    user = db.query(User).filter(User.google_sub == DEFAULT_TEST_SUB).one_or_none()
+    if user is None:
+        user = User(google_sub=DEFAULT_TEST_SUB, google_email="default@example.com")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user.id
+
 
 def orchestrator() -> AMAROrchestrator:
     s = Settings()

@@ -20,6 +20,14 @@ class GmailIntegrationError(Exception):
         self.public_message = message or self.public_message
 
 
+class AuthRequiredError(GmailIntegrationError):
+    """No valid application session on the request (missing / expired / revoked
+    bearer token). The Flutter client returns the user to the login screen."""
+
+    http_status = 401
+    public_message = "Authentication required. Please sign in again."
+
+
 class OAuthConfigError(GmailIntegrationError):
     """GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET missing or malformed."""
 

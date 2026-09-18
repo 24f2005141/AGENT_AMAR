@@ -1,0 +1,27 @@
+# Secrets and local state — must never enter an image layer.
+.env
+.env.*
+!.env.example
+.tokens/
+secrets/
+client_secret*.json
+*.db
+*.sqlite
+*.sqlite3
+
+# Local dev artifacts
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Not needed at runtime
+tests/
+docs/
+data/training/
+*.md

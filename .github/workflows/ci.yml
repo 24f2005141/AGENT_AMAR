@@ -1,0 +1,80 @@
+name: CI
+
+# CI runs entirely offline: no Gmail, no Google OAuth, no Ollama, no Firebase,
+# no production database. Everything is faked/mocked by the test suites.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest + migrations)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      APP_ENV: development
+      # A throwaway key so the crypto layer runs in its real (encrypted) mode
+      # instead of the insecure dev fallback. Not a production secret.
+      DATA_ENCRYPTION_KEY: ${{ '4f3d2c1b0a99887766554433221100ffeeddccbbaa99887766554433221100ff' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile check
+        run: python -m compileall -q app worker.py
+      - name: Tests
+        run: python -m pytest -q
+      - name: Migrations apply from scratch
+        env:
+          DATABASE_URL: sqlite:///./ci_migration_check.db
+        run: alembic upgrade head
+      - name: Migrations match the ORM (no un-migrated model drift)
+        env:
+          DATABASE_URL: sqlite:///./ci_migration_check.db
+        run: |
+          alembic check || {
+            echo "::error::Models changed without a migration. Run: alembic revision --autogenerate -m '<change>'"
+            exit 1
+          }
+      - name: Production config guard rejects an incomplete prod env
+        run: |
+          python - <<'PY'
+          from app.core.config import Settings, validate_production_config
+          problems = validate_production_config(Settings(app_env="production"))
+          assert problems, "production validation should reject an empty config"
+          assert validate_production_config(Settings()) == [], "dev must stay clean"
+          print(f"OK - {len(problems)} production rules enforced")
+          PY
+
+  frontend:
+    name: Flutter (analyze + test + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Production build validation (release APK, HTTPS API required)
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=https://api.example.com \
+            --dart-define=APP_ENV=production

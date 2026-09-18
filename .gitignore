@@ -13,6 +13,11 @@ secrets/
 client_secret*.json
 *credentials*.json
 service-account*.json
+# Firebase (Phase 16) — never commit
+google-services.json
+GoogleService-Info.plist
+firebase-adminsdk*.json
+frontend/lib/firebase_options.dart
 
 # ── Local databases ─────────────────────────────────────────────────
 *.db

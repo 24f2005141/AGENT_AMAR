@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/agent_analysis.dart';
 import '../models/email.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 import 'countdown_timer_view.dart';
 import 'priority_badge.dart';
 
@@ -60,25 +61,37 @@ class AttentionEmailCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Header: badge + category + countdown. A Wrap so a long AI
+              // category (or a 2x font scale) pushes the countdown onto the
+              // next line instead of off the card.
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: Gap.sm,
+                runSpacing: Gap.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: Gap.sm,
+                    runSpacing: Gap.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       PriorityBadge(priority: email.analysis.priority),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.mutedSlate.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
-                          email.analysis.category.toUpperCase(),
-                          style: AppTheme.mono(
-                            fontSize: 9,
-                            color: AppColors.textSecondary,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 180),
+                          child: Text(
+                            email.analysis.category.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.mono(
+                              fontSize: 9,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
                       ),
@@ -160,9 +173,15 @@ class AttentionEmailCard extends StatelessWidget {
               const Divider(color: AppColors.borderLight, height: 1),
               const SizedBox(height: 8),
 
-              // Quick Actions Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Quick actions. A Wrap, not a Row: four labelled actions do not
+              // fit a 320px card, and at 2x font they do not fit any phone.
+              // They now flow onto a second line instead of overflowing, and
+              // every action stays reachable (nothing is dropped).
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: Gap.xs,
+                runSpacing: Gap.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   TextButton.icon(
                     onPressed: onOpen,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/email.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
 
 class ReminderBottomSheet extends StatefulWidget {
   final Email email;
@@ -22,9 +23,11 @@ class ReminderBottomSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ReminderBottomSheet(
-        email: email,
-        onSetReminder: onSetReminder,
+      builder: (context) => ScrollableSheetShell(
+        child: ReminderBottomSheet(
+          email: email,
+          onSetReminder: onSetReminder,
+        ),
       ),
     );
   }

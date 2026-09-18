@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../config/api_config.dart';
 import '../models/email.dart';
+import '../services/local_schedule_service.dart';
+import '../state/auth_controller.dart';
 import '../state/inbox_controller.dart';
 import '../theme/app_theme.dart';
+import '../theme/responsive.dart';
+import 'profile_screen.dart';
 import '../widgets/alarm_dialog.dart';
 import '../widgets/attention_email_card.dart';
 import '../widgets/countdown_timer_view.dart';
@@ -11,46 +13,94 @@ import '../widgets/email_list_card.dart';
 import '../widgets/pulsing_ai_badge.dart';
 import '../widgets/reminder_bottom_sheet.dart';
 import '../widgets/snooze_bottom_sheet.dart';
-import 'agent_activity_screen.dart';
+import '../widgets/system_status_bar.dart';
 import 'email_detail_screen.dart';
 
 class HomeInboxScreen extends StatelessWidget {
   final InboxController controller;
+  final AuthController? authController;
   final Function(int tabIndex)? onNavigateTab;
 
   const HomeInboxScreen({
     super.key,
     required this.controller,
+    this.authController,
     this.onNavigateTab,
   });
 
-  Future<void> _launchOAuthLogin(BuildContext context) async {
-    final loginUrl = Uri.parse('${ApiConfig.baseUrl}/api/v1/auth/google/login');
-    try {
-      if (await canLaunchUrl(loginUrl)) {
-        await launchUrl(loginUrl, mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not open login URL: $loginUrl')),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to launch browser: $e')),
-        );
-      }
+  Future<void> _reconnectGmail(BuildContext context) async {
+    final auth = authController;
+    if (auth == null) return;
+    await auth.reconnectGmail();
+    await controller.checkGmailStatus();
+    if (context.mounted && auth.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(auth.errorMessage!)),
+      );
     }
+  }
+
+  Future<void> _clearResolved(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear Resolved'),
+        content: const Text(
+          'This removes completed and acknowledged items from your Sorted '
+          'inbox. Your Gmail emails are not deleted.\n\n'
+          'Unresolved Action Required and Reply Required items are kept.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final n = await controller.clearAcknowledged();
+    messenger.showSnackBar(SnackBar(
+      content: Text(n > 0
+          ? 'Cleared $n item${n == 1 ? '' : 's'} from your dashboard.'
+          : 'Nothing to clear — your dashboard is already tidy.'),
+    ));
+  }
+
+  void _openProfile(BuildContext context) {
+    final auth = authController;
+    if (auth == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(
+          authController: auth,
+          inboxController: controller,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final criticalEmail = controller.criticalEmail;
     final attentionList = controller.needsAttentionEmails;
     final deadlineList = controller.deadlineEmails;
     final recentList = controller.emails;
+
+    // The homepage is an attention dashboard, not an inbox: when nothing needs
+    // the user right now, show one clean "all caught up" state instead of a
+    // column of empty section cards.
+    final allCaughtUp = !controller.isLoading &&
+        controller.isGmailConnected &&
+        controller.currentFilter == 'all' &&
+        attentionList.isEmpty &&
+        deadlineList.isEmpty &&
+        recentList.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -60,14 +110,17 @@ class HomeInboxScreen extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'AGENT AMAR',
+                  'Sorted',
                   style: AppTheme.brandTitle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(width: 8),
-                PulsingAiBadge(
+                const SizedBox(width: Gap.sm),
+                // The badge label ("Connect Gmail") is the longest thing in
+                // the bar; it must yield before it pushes the title out.
+                Flexible(
+                  child: PulsingAiBadge(
                   label: !controller.isGmailConnected
                       ? 'Connect Gmail'
                       : controller.gmailMonitoringActive
@@ -78,13 +131,17 @@ class HomeInboxScreen extends StatelessWidget {
                       : controller.gmailMonitoringActive
                           ? AppColors.success
                           : AppColors.warmBeige,
+                  ),
                 ),
               ],
             ),
             Text(
               controller.connectedAccountEmail != null
                   ? controller.connectedAccountEmail!
-                  : 'Autonomous Inbox Intelligence',
+                  : 'Your attention, organized.',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
               style: AppTheme.label(fontSize: 10, color: AppColors.textMuted),
             ),
           ],
@@ -125,9 +182,9 @@ class HomeInboxScreen extends StatelessWidget {
                     );
                   },
                   onMarkComplete: () {
-                    controller.completeAction(controller.activeAlarm!.emailId);
+                    controller.markComplete(controller.activeAlarm!.emailId);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Marked action as complete!')),
+                      const SnackBar(content: Text('Marked as done.')),
                     );
                   },
                   onDismiss: () => controller.dismissActiveAlarm(),
@@ -141,24 +198,28 @@ class HomeInboxScreen extends StatelessWidget {
             icon: const Icon(Icons.alarm_on, color: AppColors.critical),
             tooltip: 'Run Deadline Check (FastAPI)',
           ),
+          // Clear Resolved — tidy the Sorted dashboard (never touches Gmail).
           IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AgentActivityScreen(
-                    traces: criticalEmail?.analysis.traces ?? [],
-                    emailSubject: criticalEmail?.subject ?? 'Autonomous Processing Pipeline',
-                    emailId: criticalEmail?.id,
-                    controller: controller,
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.smart_toy_outlined, color: AppColors.warmBeige),
-            tooltip: 'View Agent Activity Trace',
+            onPressed: () => _clearResolved(context),
+            icon: const Icon(Icons.playlist_add_check, color: AppColors.textSecondary),
+            tooltip: 'Clear Resolved',
           ),
+          if (authController != null)
+            IconButton(
+              onPressed: () => _openProfile(context),
+              icon: const Icon(Icons.account_circle_outlined, color: AppColors.textSecondary),
+              tooltip: 'Account',
+            ),
         ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(SystemStatusBar.preferredHeight(context)),
+          child: SystemStatusBar(
+            backendOnline: controller.backendOnline,
+            llmStatus: controller.llmStatus,
+            llmProvider: controller.llmProvider,
+            llmModel: controller.llmModel,
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: controller.refreshInbox,
@@ -199,7 +260,7 @@ class HomeInboxScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: () => _launchOAuthLogin(context),
+                      onPressed: () => _reconnectGmail(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.high,
                         foregroundColor: AppColors.textDark,
@@ -211,7 +272,7 @@ class HomeInboxScreen extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        'CONNECT',
+                        'RECONNECT',
                         style: AppTheme.label(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textDark),
                       ),
                     ),
@@ -257,8 +318,12 @@ class HomeInboxScreen extends StatelessWidget {
             _buildFilterChips(),
             const SizedBox(height: 16),
 
+            if (allCaughtUp) _buildCaughtUpState(),
+
             // SECTION 1: NEEDS ATTENTION
-            if (controller.currentFilter == 'all' || controller.currentFilter == 'action_required') ...[
+            if (!allCaughtUp &&
+                (controller.currentFilter == 'all' ||
+                    controller.currentFilter == 'action_required')) ...[
               _buildSectionHeader(
                 title: 'NEEDS ATTENTION',
                 countBadge: '${attentionList.length} Tasks',
@@ -277,14 +342,14 @@ class HomeInboxScreen extends StatelessWidget {
                         email: email,
                         isFeatured: email.isCritical,
                         onOpen: () => _openEmailDetail(context, email),
-                        onMarkComplete: () => controller.completeAction(email.id),
+                        onMarkComplete: () => controller.markComplete(email.id),
                         onRemindMe: () => ReminderBottomSheet.show(
                           context,
                           email: email,
-                          onSetReminder: (time, note) => controller.createReminder(
+                          onSetReminder: (time, note) => LocalScheduleService().createReminder(
                             emailId: email.id,
-                            reminderAt: time,
-                            note: note,
+                            label: note?.trim().isNotEmpty == true ? note!.trim() : email.subject,
+                            scheduledAt: time,
                           ),
                         ),
                         onSnooze: () => SnoozeBottomSheet.show(
@@ -298,7 +363,7 @@ class HomeInboxScreen extends StatelessWidget {
             ],
 
             // SECTION 2: UPCOMING DEADLINES
-            if (controller.currentFilter == 'all') ...[
+            if (!allCaughtUp && controller.currentFilter == 'all') ...[
               _buildSectionHeader(
                 title: 'UPCOMING DEADLINES',
                 countBadge: '${deadlineList.length} Upcoming',
@@ -362,10 +427,12 @@ class HomeInboxScreen extends StatelessWidget {
               const SizedBox(height: 20),
             ],
 
-            // SECTION 3: RECENT MAIL (Smart categorized feed)
+            // SECTION 3: ACTIVE MAIL — everything still awaiting attention that
+            // isn't already a task or a deadline above (mutually exclusive).
+            if (!allCaughtUp) ...[
             _buildSectionHeader(
-              title: controller.currentFilter == 'all' ? 'RECENT MAIL' : 'FILTERED EMAILS',
-              countBadge: '${recentList.length} Total',
+              title: controller.currentFilter == 'all' ? 'ACTIVE INBOX' : 'FILTERED EMAILS',
+              countBadge: '${recentList.length} Active',
               badgeColor: AppColors.mutedSlate,
             ),
             const SizedBox(height: 8),
@@ -373,7 +440,7 @@ class HomeInboxScreen extends StatelessWidget {
             if (controller.isLoading && recentList.isEmpty)
               _buildLoadingCard()
             else if (recentList.isEmpty)
-              _buildEmptyCard('No emails found in this category. Pull to refresh!')
+              _buildEmptyCard("You're all caught up — nothing needs your attention here.")
             else
               ...recentList.map(
                 (email) => EmailListCard(
@@ -381,6 +448,7 @@ class HomeInboxScreen extends StatelessWidget {
                   onTap: () => _openEmailDetail(context, email),
                 ),
               ),
+            ],
 
             const SizedBox(height: 24),
           ],
@@ -480,6 +548,35 @@ class HomeInboxScreen extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildCaughtUpState() {
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.check_circle_outline, size: 44, color: AppColors.success),
+          const SizedBox(height: 14),
+          Text(
+            "You're all caught up.",
+            style: AppTheme.heading(fontSize: 16, color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Nothing needs your attention right now. New mail and reminders '
+            'will appear here automatically.',
+            textAlign: TextAlign.center,
+            style: AppTheme.body(fontSize: 12, color: AppColors.textMuted),
+          ),
+        ],
+      ),
     );
   }
 

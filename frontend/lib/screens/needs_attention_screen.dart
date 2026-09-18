@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/agent_analysis.dart';
+import '../services/local_schedule_service.dart';
 import '../state/inbox_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/attention_email_card.dart';
@@ -22,10 +24,27 @@ class _NeedsAttentionScreenState extends State<NeedsAttentionScreen> {
   bool _showCompleted = false;
 
   @override
+  void initState() {
+    super.initState();
+    // History for the "COMPLETED" tab — resolved emails live off the active feed.
+    widget.controller.loadResolvedEmails();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final allActionEmails = widget.controller.allEmails.where((e) => e.analysis.actionRequired).toList();
-    final pendingItems = allActionEmails.where((e) => !e.userState.isCompleted).toList();
-    final completedItems = allActionEmails.where((e) => e.userState.isCompleted).toList();
+    // Canonical backend bucket — a Reply Required email has an action too, but
+    // its primary category is REPLY_REQUIRED, so it does NOT appear here.
+    // Pending = the live attention feed; completed = the resolved-history list.
+    final pendingItems = widget.controller.allEmails
+        .where((e) =>
+            e.primaryCategory == PrimaryCategory.actionRequired &&
+            !e.userState.isCompleted)
+        .toList();
+    final completedItems = widget.controller.resolvedEmails
+        .where((e) =>
+            e.primaryCategory == PrimaryCategory.actionRequired &&
+            e.userState.isCompleted)
+        .toList();
 
     final displayList = _showCompleted ? completedItems : pendingItems;
 
@@ -87,7 +106,10 @@ class _NeedsAttentionScreenState extends State<NeedsAttentionScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: InkWell(
-                      onTap: () => setState(() => _showCompleted = true),
+                      onTap: () {
+                        setState(() => _showCompleted = true);
+                        widget.controller.loadResolvedEmails();
+                      },
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -168,14 +190,14 @@ class _NeedsAttentionScreenState extends State<NeedsAttentionScreen> {
                               ),
                             );
                           },
-                          onMarkComplete: () => widget.controller.completeAction(email.id),
+                          onMarkComplete: () => widget.controller.markComplete(email.id),
                           onRemindMe: () => ReminderBottomSheet.show(
                             context,
                             email: email,
-                            onSetReminder: (time, note) => widget.controller.createReminder(
+                            onSetReminder: (time, note) => LocalScheduleService().createReminder(
                               emailId: email.id,
-                              reminderAt: time,
-                              note: note,
+                              label: note?.trim().isNotEmpty == true ? note!.trim() : email.subject,
+                              scheduledAt: time,
                             ),
                           ),
                           onSnooze: () => SnoozeBottomSheet.show(

@@ -72,12 +72,19 @@ class _PulsingAiBadgeState extends State<PulsingAiBadge>
             },
           ),
           const SizedBox(width: 6),
-          Text(
-            widget.label,
-            style: AppTheme.label(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w500,
+          // The badge sits in an app bar next to a title and action icons;
+          // its label must be able to give way rather than force the row wider.
+          Flexible(
+            child: Text(
+              widget.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: AppTheme.label(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

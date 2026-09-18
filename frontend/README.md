@@ -1,6 +1,7 @@
-# agent_amar
+# Sorted
 
-A new Flutter project.
+Your attention, organized. Flutter client for the Sorted email intelligence
+and action-management app.
 
 ## Getting Started
 

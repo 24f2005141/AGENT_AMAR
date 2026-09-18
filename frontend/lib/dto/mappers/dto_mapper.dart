@@ -72,6 +72,10 @@ class DtoMapper {
 
     return Email(
       id: dto.emailId,
+      // canonical inbox bucket — straight from the backend, never re-derived here
+      primaryCategory: PrimaryCategory.fromWire(dto.primaryCategory),
+      autoPrimaryCategory: PrimaryCategory.fromWire(dto.autoPrimaryCategory),
+      primaryCategoryUserCorrected: dto.primaryCategorySource.toLowerCase() == 'user',
       senderName: dto.senderName != null && dto.senderName!.isNotEmpty
           ? dto.senderName!
           : dto.senderEmail,
@@ -181,7 +185,7 @@ class DtoMapper {
       id: dto.id.toString(),
       emailId: dto.emailId ?? '',
       emailSubject: emailSubject ?? dto.note ?? 'Email Reminder #${dto.id}',
-      senderName: 'AGENT AMAR',
+      senderName: 'Sorted',
       reminderAt: dto.reminderAt.toLocal(),
       reminderType: ReminderType.userScheduled,
       status: status,

@@ -14,8 +14,8 @@ testable and reusable.
 
 from __future__ import annotations
 
-import logging
 import os
+from dataclasses import dataclass
 from typing import Any
 
 from google.auth.exceptions import GoogleAuthError, RefreshError
@@ -30,16 +30,45 @@ from app.core.errors import (
     OAuthExchangeError,
     TokenRefreshError,
 )
+from app.core.logging_setup import secure_logger
+from app.core.sanitization import mask_sensitive
+from app.services.google_identity import GoogleIdentity, GoogleIdentityError, decode_id_token
 from app.services.token_store import DEFAULT_ACCOUNT, TokenStore
 
-# --- Gmail scope -----------------------------------------------------------
+# --- OAuth scopes ---------------------------------------------------------
 #
-# gmail.readonly is the narrowest scope that still lets us read a message
-# BODY (which the Mail Intake Agent needs). It grants read-only access only:
-#   * NO send, NO modify, NO delete, NO settings, NO other Google APIs.
-# gmail.metadata would be narrower but cannot read the body, so it is not
-# enough for this pipeline.
-GMAIL_SCOPES: list[str] = ["https://www.googleapis.com/auth/gmail.readonly"]
+# Phase 15: sign-in with Google needs identity scopes (openid / email / profile)
+# so we can key the application user by the stable Google ``sub``.
+#
+# Gmail access is two narrow scopes, nothing wider:
+#   * gmail.readonly — read message bodies; NO modify / delete / settings.
+#   * gmail.send     — send a message the user explicitly approved (the AI
+#                      reply feature). It CANNOT read, modify or delete mail.
+# Together they still cannot touch labels, filters, or account settings.
+_GMAIL_READONLY = "https://www.googleapis.com/auth/gmail.readonly"
+_GMAIL_SEND = "https://www.googleapis.com/auth/gmail.send"
+#: Public so the send path can verify a stored credential actually carries it
+#: (a user connected before this scope existed must reconnect once).
+GMAIL_SEND_SCOPE = _GMAIL_SEND
+OAUTH_SCOPES: list[str] = [
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    _GMAIL_READONLY,
+    _GMAIL_SEND,
+]
+# Back-compat alias (older imports / the Gmail scope check).
+GMAIL_SCOPES: list[str] = OAUTH_SCOPES
+
+
+@dataclass(frozen=True)
+class GoogleExchange:
+    """Result of a successful OAuth code exchange (not yet persisted)."""
+
+    identity: GoogleIdentity | None
+    credentials: Credentials
+    account_email: str | None
+    blob: dict[str, Any]
 
 _GOOGLE_AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
 _GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token"
@@ -48,7 +77,7 @@ _GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token"
 # openid). Without this, oauthlib raises "Scope has changed".
 os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
 
-logger = logging.getLogger("agent_amar.gmail_auth")
+logger = secure_logger("agent_amar.gmail_auth")
 
 
 class GmailAuthService:
@@ -73,7 +102,7 @@ class GmailAuthService:
                 "client_secret": self.settings.google_client_secret,
                 "auth_uri": _GOOGLE_AUTH_URI,
                 "token_uri": _GOOGLE_TOKEN_URI,
-                "redirect_uris": [self.settings.google_redirect_uri],
+                "redirect_uris": [self.settings.google_redirect_uri_resolved],
             }
         }
 
@@ -86,8 +115,8 @@ class GmailAuthService:
         # verifier alongside `state`.
         return Flow.from_client_config(
             self._client_config(),
-            scopes=GMAIL_SCOPES,
-            redirect_uri=self.settings.google_redirect_uri,
+            scopes=OAUTH_SCOPES,
+            redirect_uri=self.settings.google_redirect_uri_resolved,
             state=state,
             autogenerate_code_verifier=False,
         )
@@ -113,11 +142,11 @@ class GmailAuthService:
         error: str | None = None,
         state: str | None = None,
         authorization_response: str | None = None,
-        account_id: str = DEFAULT_ACCOUNT,
-    ) -> dict[str, Any]:
-        """Exchange an authorization code and persist the credentials.
+    ) -> GoogleExchange:
+        """Exchange an authorization code for credentials + the Google identity.
 
-        Returns the public connection info dict (no secrets).
+        Does **not** persist — the caller keys the token store by the resolved
+        application user id (Phase 15). Raises an ``OAuth*Error`` on failure.
         """
         if error:
             raise OAuthAccessDeniedError(f"Google returned: {error}")
@@ -131,17 +160,41 @@ class GmailAuthService:
             else:
                 flow.fetch_token(code=code)
         except (GoogleAuthError, Exception) as exc:  # oauthlib raises bare exceptions
-            logger.warning("OAuth code exchange failed: %s: %s", type(exc).__name__, exc)
+            # The exception text can echo the auth code / a token — mask it
+            # before it reaches logs or (in dev) the API response (Phase 14).
+            safe_reason = mask_sensitive(str(exc))
+            logger.warning("OAuth code exchange failed: %s: %s", type(exc).__name__, safe_reason)
             detail = None
             if self.settings.app_env == "development":
-                # The developer's own misconfiguration — surface the real reason.
-                detail = f"Google rejected the sign-in ({type(exc).__name__}: {exc})"
+                # The developer's own misconfiguration — surface the (masked) reason.
+                detail = f"Google rejected the sign-in ({type(exc).__name__}: {safe_reason})"
             raise OAuthExchangeError(detail) from exc
 
         creds: Credentials = flow.credentials
-        account_email = self._safe_lookup_email(creds)
+        identity: GoogleIdentity | None = None
+        try:
+            identity = decode_id_token(
+                getattr(creds, "id_token", None), client_id=self.settings.google_client_id
+            )
+        except GoogleIdentityError as exc:
+            logger.warning("could not decode Google id_token: %s", exc)
+        account_email = (identity.email if identity else None) or self._safe_lookup_email(creds)
+        blob = _credentials_to_blob(creds)
+        if account_email:
+            blob["account_email"] = account_email
+        return GoogleExchange(
+            identity=identity, credentials=creds, account_email=account_email, blob=blob
+        )
+
+    def persist_credentials(
+        self,
+        creds: Credentials,
+        *,
+        account_id: str,
+        account_email: str | None = None,
+    ) -> None:
+        """Store (or replace) a user's credential blob in the token store."""
         self._persist(creds, account_id=account_id, account_email=account_email)
-        return self.connection_info(account_id)
 
     # -- step 3+4: load / refresh ----------------------------------
 
@@ -156,7 +209,9 @@ class GmailAuthService:
             return None
 
         try:
-            creds = Credentials.from_authorized_user_info(blob, scopes=GMAIL_SCOPES)
+            creds = Credentials.from_authorized_user_info(
+                blob, scopes=blob.get("scopes") or OAUTH_SCOPES
+            )
         except (ValueError, KeyError) as exc:
             raise TokenRefreshError("Stored credentials are unreadable.") from exc
 
@@ -181,11 +236,18 @@ class GmailAuthService:
         """Non-raising connection summary for the status endpoint."""
         blob = self.token_store.get(account_id)
         connected = bool(blob and blob.get("refresh_token"))
+        stored_scopes = list((blob or {}).get("scopes") or [])
+        if connected:
+            # report what was actually granted (a pre-send-scope connection
+            # still only lists gmail.readonly until the user reconnects)
+            scopes = [s for s in (_GMAIL_READONLY, _GMAIL_SEND) if s in stored_scopes] or [_GMAIL_READONLY]
+        else:
+            scopes = []
         return {
             "connected": connected,
             "provider": "gmail",
             "account_email": (blob or {}).get("account_email"),
-            "scopes": GMAIL_SCOPES if connected else [],
+            "scopes": scopes,
         }
 
     def disconnect(self, account_id: str = DEFAULT_ACCOUNT) -> None:
@@ -227,6 +289,6 @@ def _credentials_to_blob(creds: Credentials) -> dict[str, Any]:
         "token_uri": creds.token_uri,
         "client_id": creds.client_id,
         "client_secret": creds.client_secret,
-        "scopes": list(creds.scopes or GMAIL_SCOPES),
+        "scopes": list(creds.scopes or OAUTH_SCOPES),
         "expiry": creds.expiry.isoformat() if creds.expiry else None,
     }

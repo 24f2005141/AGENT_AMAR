@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/local_schedule_service.dart';
+import '../state/auth_controller.dart';
 import '../state/inbox_controller.dart';
 import '../theme/app_theme.dart';
 import 'deadlines_screen.dart';
@@ -6,12 +8,19 @@ import 'home_inbox_screen.dart';
 import 'needs_attention_screen.dart';
 import 'reminders_screen.dart';
 
+/// The tab a home-screen widget (or any other external entry point) asked to
+/// open. Reuses the EXISTING bottom-nav rather than adding a second
+/// navigation architecture — `MainNavigationScreen` listens and switches.
+final ValueNotifier<int?> mainNavigationTab = ValueNotifier<int?>(null);
+
 class MainNavigationScreen extends StatefulWidget {
   final InboxController controller;
+  final AuthController? authController;
 
   const MainNavigationScreen({
     super.key,
     required this.controller,
+    this.authController,
   });
 
   @override
@@ -26,19 +35,42 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    mainNavigationTab.addListener(_onExternalTabRequest);
+    _onExternalTabRequest(); // a widget tap may have cold-started the app
   }
 
   @override
   void dispose() {
+    mainNavigationTab.removeListener(_onExternalTabRequest);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Honour a tab requested from outside the widget tree (home-screen widget
+  /// deep link), then clear it so it is applied once.
+  void _onExternalTabRequest() {
+    final requested = mainNavigationTab.value;
+    if (requested == null) return;
+    mainNavigationTab.value = null;
+    if (requested < 0 || requested > 3 || !mounted) return;
+    setState(() => _currentIndex = requested);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Sync notifications and data when app comes back to foreground
-      widget.controller.loadData();
+      // Back to the foreground: silently reload persisted backend state (the
+      // backend scheduler has been syncing Gmail while we were away — no Gmail
+      // sync / LLM is triggered here), re-check the connection status, and
+      // resume the lightweight foreground poll.
+      widget.controller.autoRefresh();
+      widget.controller.refreshSystemStatus();
+      widget.controller.startAutoRefresh();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      // Don't poll while backgrounded — push notifications cover new mail then.
+      widget.controller.stopAutoRefresh();
     }
   }
 
@@ -51,14 +83,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.controller,
+      // Two independent sources: InboxController (backend-derived email/
+      // notification state) and LocalScheduleService (device-local
+      // reminders) — merged so the Reminders badge updates on create/cancel
+      // without coupling the two systems together.
+      listenable: Listenable.merge([widget.controller, LocalScheduleService()]),
       builder: (context, _) {
         final pendingAttentionCount = widget.controller.needsAttentionEmails.length;
-        final pendingRemindersCount = widget.controller.reminders.length;
+        final pendingRemindersCount = LocalScheduleService().pendingReminders.length;
 
         final screens = [
           HomeInboxScreen(
             controller: widget.controller,
+            authController: widget.authController,
             onNavigateTab: _onTabSelected,
           ),
           NeedsAttentionScreen(

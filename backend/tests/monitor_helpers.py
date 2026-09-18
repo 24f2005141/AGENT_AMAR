@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.db.models import DeadlineRecord, EmailRecord
 from app.services.persistence_service import PersistenceService
-from tests.persistence_helpers import decision_for, internship_email
+from tests.persistence_helpers import decision_for, default_user_pk, internship_email
 
 # 2026-06-01 12:00 UTC == 17:30 Asia/Kolkata — NOT within 23:00–07:00 quiet hours.
 NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
@@ -19,9 +19,14 @@ NOW = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
 NOW_QUIET = datetime(2026, 6, 1, 20, 0, tzinfo=timezone.utc)
 
 
-def persist_internship(db, *, email_id: str = "gmail_m1", now: datetime = NOW) -> EmailRecord:
+def persist_internship(
+    db, *, email_id: str = "gmail_m1", now: datetime = NOW, user_pk: int | None = None
+) -> EmailRecord:
     email = internship_email(email_id)
-    return PersistenceService(db).persist_decision(email, decision_for(email, now=now))
+    uid = user_pk if user_pk is not None else default_user_pk(db)
+    return PersistenceService(db, user_pk=uid).persist_decision(
+        email, decision_for(email, now=now)
+    )
 
 
 def make_monitored(
@@ -36,12 +41,14 @@ def make_monitored(
     monitoring: bool | None = True,
     ambiguous: bool = False,
     snoozed_until: datetime | None = None,
+    user_pk: int | None = None,
 ) -> EmailRecord:
     """``monitoring``: True = start it now, False = explicitly stopped,
     None = leave off so the monitor's auto-start can pick it up."""
     """Persist an internship email and shape its deadline/state for a scenario."""
-    svc = PersistenceService(db)
-    rec = persist_internship(db, email_id=email_id, now=now)
+    uid = user_pk if user_pk is not None else default_user_pk(db)
+    svc = PersistenceService(db, user_pk=uid)
+    rec = persist_internship(db, email_id=email_id, now=now, user_pk=uid)
     dl: DeadlineRecord = rec.deadlines[0]
 
     if ambiguous:
