@@ -2,11 +2,12 @@
 
 **Course Evaluation Component:** Design Assessment 2 (DA2) — Project Evaluation & Implementation Review  
 **Project Title:** AGENT AMAR: An Autonomous Multi-Agent and Machine Learning Hybrid Architecture for Context-Aware Email Triage, Action Item Extraction, and Escalated Deadline Intelligence  
-**Author:** Mirttul (Student Roll No.: 24f2005141)  
-**Affiliation:** Department of Data Science and Applications, Indian Institute of Technology Madras  
-**Email:** `24f2005141@ds.study.iitm.ac.in`  
+**Authors:**  
+1. **S. MIRTTUL** (Student Roll No.: **24BRS1428**)  
+2. **ADITYA SRIKANTH** (Student Roll No.: **24BRS1437**)  
+**Department / Affiliation:** School of Computer Science and Engineering / Department of Data Science and Applications  
 **GitHub Repository:** [https://github.com/24f2005141/AGENT_AMAR](https://github.com/24f2005141/AGENT_AMAR)  
-**Project Demo Video / Code Repository Commits:** Verified under commit `e2d65bf` and main branch.
+**Project Demo Video / Code Repository Commits:** Verified under main branch.
 
 ---
 
@@ -525,6 +526,15 @@ Benchmarking was conducted on a commodity quad-core workstation (AMD Ryzen 7, 16
 ### 6.5 Safety-Critical Verification & Zero-Leakage Privacy
 1. **Institutional Domain Protection:** Verified against 18 institutional circulars originating from `@college.edu`. In 100% of cases, the deterministic orchestrator overrode any ambiguous feature signals, strictly preventing false-positive spam filtering.
 2. **Cryptographic Integrity & Auditability:** Inspection of SQLite raw binary storage confirmed that email bodies, subject strings, sender identities, and action notes contained zero plaintext tokens, persisting strictly as AES-256-GCM ciphertexts with 128-bit authentication tags. The SHA-256 tamper-evident ledger verified 100% hash consistency across all 58 insertions.
+
+---
+
+### 6.6 Project Contribution Matrix
+
+| Team Member / Contributor | Module / Subsystem Responsibility | Specific Technical Deliverables & Commits |
+| :--- | :--- | :--- |
+| **S. MIRTTUL**<br>(Roll No.: **24BRS1428**) | **Multi-Agent Orchestration, Machine Learning Pipeline, & Evaluation Framework** | &bull; Implemented deterministic `AMAROrchestrator` conflict resolution matrix and domain precedence rules.<br>&bull; Developed cascaded `TriageAgent` (sublinear TF-IDF + calibrated Logistic Regression with $C=30.0$, confidence gating $\tau \ge 0.70$, and structured LLM fallback).<br>&bull; Engineered `ActionAgent` imperative verb parser and `DeadlineAgent` relative temporal resolution to ISO-8601 UTC timestamps.<br>&bull; Formulated mathematical equations, loss calibration, and developed offline benchmark evaluation suite (`evaluate.py`, `training.py`).<br>&bull; Conducted 15-class experimental evaluation, confusion matrix generation, and drafted Chapters 3 &amp; 6. |
+| **ADITYA SRIKANTH**<br>(Roll No.: **24BRS1437**) | **Data Ingestion, Cryptographic Security, Priority Engine, & Client Delivery** | &bull; Engineered `MailIntakeAgent` for RFC 2822 MIME parsing, HTML tag stripping, Unicode NFKC normalization, and PII/credential redaction.<br>&bull; Developed `GmailSyncService` integrating Google OAuth 2.0 and incremental Gmail History API sync with stateful `historyId` baselining.<br>&bull; Designed transparent AES-256-GCM data-at-rest encryption layer and SHA-256 tamper-evident append-only audit ledger.<br>&bull; Implemented `PriorityAgent` context weighting, `MonitorScheduler` asynchronous cron loops, and multi-tier deadline escalation ladder ($\text{NORMAL} \to \text{REMINDER} \to \text{URGENT} \to \text{ALARM}$).<br>&bull; Built Firebase Cloud Messaging (FCM) background push service and developed cross-platform Flutter client UI application (Chapters 4 &amp; 5). |
 
 ---
 

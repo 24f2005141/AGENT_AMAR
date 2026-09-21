@@ -263,7 +263,8 @@
     <div class="doc-badge">Course Mini Project — Review 1 (DA1)</div>
     <h1 class="doc-title">AGENT AMAR: An Autonomous Multi-Agent and Machine Learning Hybrid Architecture for Context-Aware Email Triage, Action Item Extraction, and Escalated Deadline Intelligence</h1>
     <div class="doc-meta">
-      <strong>Candidate / Student ID:</strong> 24f2005141 &nbsp;|&nbsp; <strong>Weightage:</strong> 10 Marks &nbsp;|&nbsp; <strong>Evaluation Component:</strong> DA1
+      <strong>Team Members:</strong> S. MIRTTUL (Roll No.: 24BRS1428) &nbsp;|&nbsp; ADITYA SRIKANTH (Roll No.: 24BRS1437)<br>
+      <strong>Weightage:</strong> 10 Marks &nbsp;|&nbsp; <strong>Evaluation Component:</strong> DA1
     </div>
     <div class="doc-links">
       <strong>GitHub Repository:</strong> <a href="https://github.com/24f2005141/AGENT_AMAR">https://github.com/24f2005141/AGENT_AMAR</a><br>
@@ -605,22 +606,32 @@
   <table>
     <thead>
       <tr>
-        <th style="width: 25%;">Contributor</th>
-        <th style="width: 35%;">Module Responsibility</th>
-        <th style="width: 40%;">Specific Deliverables &amp; Code Commits</th>
+        <th style="width: 25%;">Team Member / Contributor</th>
+        <th style="width: 35%;">Module / Subsystem Responsibility</th>
+        <th style="width: 40%;">Specific Technical Deliverables &amp; Code Commits</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><strong>Mirttul (Roll: 24f2005141)</strong></td>
-        <td><strong>Multi-Agent Orchestration, Machine Learning Pipeline, &amp; Full-Stack System Architecture</strong></td>
+        <td><strong>S. MIRTTUL</strong><br>(Roll No.: <strong>24BRS1428</strong>)</td>
+        <td><strong>Multi-Agent Orchestration, Machine Learning Pipeline, &amp; Evaluation Framework</strong></td>
         <td>
-          &bull; Implemented `AMAROrchestrator` deterministic conflict arbitration engine.<br>
-          &bull; Developed cascaded `TriageAgent` (TF-IDF + calibrated Logistic Regression with $C=30.0$).<br>
-          &bull; Built `MailIntakeAgent` with RFC 2822 parsing and HTML sanitization.<br>
-          &bull; Engineered transparent AES-256-GCM encryption layer and SHA-256 audit ledger.<br>
-          &bull; Implemented FastAPI REST backend with incremental Gmail History API sync.<br>
-          &bull; Developed cross-platform Flutter application with deadline proximity escalation.
+          &bull; Designed &amp; implemented deterministic `AMAROrchestrator` conflict resolution matrix and domain precedence rules.<br>
+          &bull; Engineered cascaded `TriageAgent` (sublinear TF-IDF + calibrated Logistic Regression with $C=30.0$, confidence gating $\tau \ge 0.70$, and structured LLM fallback).<br>
+          &bull; Implemented `ActionAgent` imperative verb parser and `DeadlineAgent` relative temporal resolution to ISO-8601 UTC timestamps.<br>
+          &bull; Formulated mathematical equations, loss calibration, and developed offline benchmark evaluation suite (`evaluate.py`, `training.py`).<br>
+          &bull; Conducted 15-class experimental ablation studies and wrote DA1 problem formalization and literature survey comparison.
+        </td>
+      </tr>
+      <tr>
+        <td><strong>ADITYA SRIKANTH</strong><br>(Roll No.: <strong>24BRS1437</strong>)</td>
+        <td><strong>Data Ingestion, Cryptographic Security, Priority Engine, &amp; Client Delivery</strong></td>
+        <td>
+          &bull; Engineered `MailIntakeAgent` for RFC 2822 MIME parsing, HTML tag stripping, Unicode NFKC normalization, and PII/credential redaction.<br>
+          &bull; Developed `GmailSyncService` integrating Google OAuth 2.0 and incremental Gmail History API sync with stateful `historyId` baselining.<br>
+          &bull; Designed transparent AES-256-GCM data-at-rest encryption layer and SHA-256 tamper-evident append-only audit ledger.<br>
+          &bull; Implemented `PriorityAgent` context weighting, `MonitorScheduler` asynchronous cron loops, and multi-tier deadline escalation ladder ($\text{NORMAL} \to \text{REMINDER} \to \text{URGENT} \to \text{ALARM}$).<br>
+          &bull; Built Firebase Cloud Messaging (FCM) background push service and developed cross-platform Flutter client UI application.
         </td>
       </tr>
     </tbody>

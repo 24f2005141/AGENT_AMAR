@@ -2,7 +2,9 @@
 
 **Course Code / Component:** Design Assessment 1 (DA1) — Review 1  
 **Project Title:** AGENT AMAR: An Autonomous Multi-Agent and Machine Learning Hybrid Architecture for Context-Aware Email Triage, Action Item Extraction, and Escalated Deadline Intelligence  
-**Candidate Roll No. / Identifier:** 24f2005141  
+**Team Members:**  
+- **S. MIRTTUL** (Roll No.: 24BRS1428)  
+- **ADITYA SRIKANTH** (Roll No.: 24BRS1437)  
 **GitHub Repository Link:** [https://github.com/24f2005141/AGENT_AMAR](https://github.com/24f2005141/AGENT_AMAR)  
 **Dataset-Loading Code Permalinks:**
 - Core Data Ingestion & Pipeline Training: [`backend/app/ml/training.py`](https://github.com/24f2005141/AGENT_AMAR/blob/main/backend/app/ml/training.py)
@@ -281,9 +283,10 @@ The initial training corpus comprises over 40 hand-verified seed samples spannin
 
 ## 6. Project Contribution Matrix
 
-| Team Member / Contributor | Module / Subsystem Responsibility | Specific Deliverables & Commits |
+| Team Member / Contributor | Module / Subsystem Responsibility | Specific Technical Deliverables & Commits |
 | :--- | :--- | :--- |
-| **Mirttul (Roll: 24f2005141)** | **Multi-Agent Orchestration, ML Pipeline, & Full-Stack Architecture** | - Implemented `AMAROrchestrator` deterministic conflict arbitration engine.<br>- Developed cascaded `TriageAgent` (TF-IDF + Logistic Regression with calibrated $C=30.0$ threshold gate).<br>- Engineered `MailIntakeAgent` with RFC 2822 parsing and HTML sanitization.<br>- Designed AES-256-GCM transparent encryption layer and SHA-256 audit ledger.<br>- Built FastAPI REST backend with incremental Gmail History API sync.<br>- Developed cross-platform Flutter application with real-time deadline proximity escalation. |
+| **S. MIRTTUL**<br>(Roll No.: **24BRS1428**) | **Multi-Agent Orchestration, Machine Learning Pipeline, & Evaluation Framework** | &bull; Designed & implemented deterministic `AMAROrchestrator` conflict resolution matrix and domain precedence rules.<br>&bull; Engineered cascaded `TriageAgent` (sublinear TF-IDF + calibrated Logistic Regression with $C=30.0$, confidence gating $\tau \ge 0.70$, and structured LLM fallback).<br>&bull; Implemented `ActionAgent` imperative verb parser and `DeadlineAgent` relative temporal resolution to ISO-8601 UTC timestamps.<br>&bull; Formulated mathematical equations, loss calibration, and developed offline benchmark evaluation suite (`evaluate.py`, `training.py`).<br>&bull; Conducted 15-class experimental ablation studies and wrote DA1 problem formalization and literature survey comparison. |
+| **ADITYA SRIKANTH**<br>(Roll No.: **24BRS1437**) | **Data Ingestion, Cryptographic Security, Priority Engine, & Client Delivery** | &bull; Engineered `MailIntakeAgent` for RFC 2822 MIME parsing, HTML tag stripping, Unicode NFKC normalization, and PII/credential redaction.<br>&bull; Developed `GmailSyncService` integrating Google OAuth 2.0 and incremental Gmail History API sync with stateful `historyId` baselining.<br>&bull; Designed transparent AES-256-GCM data-at-rest encryption layer and SHA-256 tamper-evident append-only audit ledger.<br>&bull; Implemented `PriorityAgent` context weighting, `MonitorScheduler` asynchronous cron loops, and multi-tier deadline escalation ladder ($\text{NORMAL} \to \text{REMINDER} \to \text{URGENT} \to \text{ALARM}$).<br>&bull; Built Firebase Cloud Messaging (FCM) background push service and developed cross-platform Flutter client UI application. |
 
 ---
 
