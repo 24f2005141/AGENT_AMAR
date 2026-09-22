@@ -1,5 +1,6 @@
 """
-AGENT AMAR - DOCX Report Generator for Review 2 (DA2) - IEEE Conference Format
+AGENT AMAR - Clean DOCX Report Generator for Review 2 (DA2) - IEEE Conference Format
+Formats cleanly without unreadable symbols and with Contribution Matrix removed.
 """
 
 import os
@@ -125,6 +126,7 @@ def add_header_footer(doc, header_text, footer_text):
     section.right_margin = Inches(1.0)
     section.different_first_page_header_footer = False
     
+    # Header
     header = section.header
     hp = header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -134,16 +136,40 @@ def add_header_footer(doc, header_text, footer_text):
     hrun.font.italic = True
     hrun.font.color.rgb = COLOR_MUTED
     
+    # Footer: Two-cell borderless table for robust left/right alignment
     footer = section.footer
-    fp = footer.paragraphs[0]
-    fp.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    frun1 = fp.add_run(footer_text + "\t\tPage ")
-    frun1.font.name = "Calibri"
-    frun1.font.size = Pt(8.5)
-    frun1.font.color.rgb = COLOR_MUTED
+    p_orig = footer.paragraphs[0]
+    p_orig.text = ""
     
+    tbl_footer = footer.add_table(rows=1, cols=2, width=Inches(6.5))
+    tbl_footer.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_footer.autofit = False
+    
+    # Left cell
+    c_left = tbl_footer.cell(0, 0)
+    c_left.width = Inches(4.8)
+    p_l = c_left.paragraphs[0]
+    p_l.paragraph_format.space_before = Pt(0)
+    p_l.paragraph_format.space_after = Pt(0)
+    p_l.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    r_l = p_l.add_run(footer_text)
+    r_l.font.name = "Calibri"
+    r_l.font.size = Pt(8.5)
+    r_l.font.color.rgb = COLOR_MUTED
+    
+    # Right cell
+    c_right = tbl_footer.cell(0, 1)
+    c_right.width = Inches(1.7)
+    p_r = c_right.paragraphs[0]
+    p_r.paragraph_format.space_before = Pt(0)
+    p_r.paragraph_format.space_after = Pt(0)
+    p_r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r_r = p_r.add_run("Page ")
+    r_r.font.name = "Calibri"
+    r_r.font.size = Pt(8.5)
+    r_r.font.color.rgb = COLOR_MUTED
     fld = parse_xml(r'<w:fldSimple %s w:instr="PAGE"/>' % nsdecls('w'))
-    fp._p.append(fld)
+    p_r._p.append(fld)
 
 def add_callout_box(doc, text_content, label=""):
     table = doc.add_table(rows=1, cols=1)
@@ -233,11 +259,13 @@ def add_body_p(doc, text, bold_prefix="", italic=False):
     p.paragraph_format.space_after = Pt(4)
     p.paragraph_format.line_spacing = 1.15
     if bold_prefix:
-        r_bold = p.add_run(bold_prefix + " ")
-        r_bold.font.name = "Calibri"
-        r_bold.font.size = Pt(10)
-        r_bold.font.bold = True
-        r_bold.font.color.rgb = COLOR_DARK
+        clean_prefix = bold_prefix.lstrip("•- \t").strip()
+        if clean_prefix:
+            r_bold = p.add_run(clean_prefix + " ")
+            r_bold.font.name = "Calibri"
+            r_bold.font.size = Pt(10)
+            r_bold.font.bold = True
+            r_bold.font.color.rgb = COLOR_DARK
     r_body = p.add_run(text)
     r_body.font.name = "Calibri"
     r_body.font.size = Pt(10)
@@ -251,11 +279,13 @@ def add_bullet_p(doc, text, bold_prefix=""):
     p.paragraph_format.space_after = Pt(2)
     p.paragraph_format.line_spacing = 1.15
     if bold_prefix:
-        r_bold = p.add_run(bold_prefix + " ")
-        r_bold.font.name = "Calibri"
-        r_bold.font.size = Pt(10)
-        r_bold.font.bold = True
-        r_bold.font.color.rgb = COLOR_DARK
+        clean_prefix = bold_prefix.lstrip("•- \t").strip()
+        if clean_prefix:
+            r_bold = p.add_run(clean_prefix + " ")
+            r_bold.font.name = "Calibri"
+            r_bold.font.size = Pt(10)
+            r_bold.font.bold = True
+            r_bold.font.color.rgb = COLOR_DARK
     r_body = p.add_run(text)
     r_body.font.name = "Calibri"
     r_body.font.size = Pt(10)
@@ -284,7 +314,7 @@ def add_centered_image(doc, image_path, width_in_inches=6.5, caption_text=""):
             run_cap.font.color.rgb = COLOR_MUTED
 
 def build_da2_report(output_path):
-    print(f"Building DA2 Review 2 report -> {output_path}")
+    print(f"Building DA2 Review 2 report (Clean, No Contribution Matrix) -> {output_path}")
     doc = docx.Document()
     
     add_header_footer(
@@ -323,7 +353,7 @@ def build_da2_report(output_path):
     
     # Abstract
     abstract_text = (
-        "Abstract—Modern academic and professional institutions suffer from severe digital communication overload, "
+        "Abstract - Modern academic and professional institutions suffer from severe digital communication overload, "
         "with users spending over 28% of their workweeks manually sorting email communications. This report presents "
         "the architectural implementation, dataset engineering, and experimental evaluation of AGENT AMAR, an autonomous "
         "multi-agent and machine learning hybrid productivity system. AGENT AMAR monitors Gmail via Google OAuth 2.0 with "
@@ -337,13 +367,13 @@ def build_da2_report(output_path):
         "Flutter application. Experimental evaluation on a multi-class academic email benchmark across 15 operational categories "
         "demonstrates an overall classification accuracy of 93.1%, a Macro-F1 score of 0.914, an LLM avoidance rate of 77.6%, "
         "sub-4 ms local CPU inference latency, and 100.0% recall on safety-critical academic examinations and placement circulars.\n\n"
-        "Index Terms—Multi-Agent Systems, Email Intelligence, Cascaded Classification, Natural Language Processing, "
+        "Index Terms - Multi-Agent Systems, Email Intelligence, Cascaded Classification, Natural Language Processing, "
         "Temporal Expression Grounding, Deterministic Arbitration, AES-256-GCM Encryption, Firebase Cloud Messaging, Flutter."
     )
     add_callout_box(doc, abstract_text, "EXECUTIVE ABSTRACT & INDEX TERMS")
     
     # Chapter 3: Proposed Methodology
-    add_heading_1(doc, "Chapter 3 – Proposed Methodology")
+    add_heading_1(doc, "Chapter 3 - Proposed Methodology")
     add_heading_2(doc, "3.1 System Architecture Overview & Component Decomposition")
     add_body_p(doc, "The proposed AGENT AMAR system is organized as a decoupled, multi-tier pipeline designed to maximize processing throughput, ensure data privacy, and eliminate reliance on expensive, high-latency cloud language models for routine communications. The end-to-end data flow operates across four coordinated subsystems:")
     
@@ -408,7 +438,7 @@ def build_da2_report(output_path):
     style_table(t_stack, stack_widths, stack_headers, stack_data)
     
     # Chapter 4: Dataset and Preprocessing
-    add_heading_1(doc, "Chapter 4 – Dataset and Preprocessing")
+    add_heading_1(doc, "Chapter 4 - Dataset and Preprocessing")
     add_heading_2(doc, "4.1 Dataset Identification, Sources & Provenance")
     add_body_p(doc, "The experimental validation of AGENT AMAR utilizes a multi-tiered dataset architecture designed to evaluate both standard operational throughput and adversarial edge cases:")
     add_bullet_p(doc, "Contains 134 structured, labeled email payloads spanning all 15 operational categories. The dataset is carefully balanced across categories to prevent majority-class bias during linear model fitting.", "1. Seed Training Corpus (email_training_data.sample.jsonl):")
@@ -470,41 +500,41 @@ def build_da2_report(output_path):
     add_body_p(doc, "The dataset is partitioned using stratified sampling: 70% Training Set (fitting TF-IDF vocabulary D ~= 10,000 and balanced Logistic Regression weights); 15% Validation Set (grid search for C in [0.1, 100.0] and tau in [0.50, 0.95]); and 15% Held-Out Test Set (evaluated strictly once for unbiased generalization reporting).")
     
     # Chapter 5: Implementation
-    add_heading_1(doc, "Chapter 5 – Implementation")
+    add_heading_1(doc, "Chapter 5 - Implementation")
     add_heading_2(doc, "5.1 Architectural Implementation & Functional Prototype")
     add_body_p(doc, "The complete AGENT AMAR system has been implemented as a fully functional, production-grade microservice architecture. The codebase is organized cleanly under two primary trees: backend/ (FastAPI, Python ML core, SQLite/PostgreSQL) and frontend/ (Flutter SDK 3.x cross-platform mobile/desktop client).")
     
     tree_text = (
         "AGENT_AMAR/\n"
-        "├── backend/\n"
-        "│   ├── app/\n"
-        "│   │   ├── agents/            # Multi-agent implementations & rule engines\n"
-        "│   │   │   ├── intake_agent.py        # RFC 2822 parser & HTML sanitization\n"
-        "│   │   │   ├── triage_agent.py        # Cascaded triage (Deterministic -> ML -> LLM)\n"
-        "│   │   │   ├── triage_rules.py        # Domain keyword & sender rule tables\n"
-        "│   │   │   ├── action_agent.py        # Imperative task extraction engine\n"
-        "│   │   │   ├── deadline_agent.py      # Relative temporal parsing & ISO normalization\n"
-        "│   │   │   ├── priority_agent.py      # Multi-factor dynamic priority scoring\n"
-        "│   │   │   └── amar_orchestrator.py   # Deterministic arbitration & routing coordinator\n"
-        "│   │   ├── ml/                # Local machine learning pipeline\n"
-        "│   │   │   ├── email_classifier.py    # Sklearn runtime inference wrapper & caching\n"
-        "│   │   │   ├── training.py            # TF-IDF + Logistic Regression training pipeline\n"
-        "│   │   │   ├── train.py               # CLI training entrypoint\n"
-        "│   │   │   ├── evaluate.py            # Offline benchmark evaluation framework\n"
-        "│   │   │   └── feedback_dataset.py    # Active learning feedback collector\n"
-        "│   │   ├── services/          # Core backend infrastructure services\n"
-        "│   │   │   ├── gmail_sync_service.py  # Incremental Gmail History API synchronization\n"
-        "│   │   │   ├── persistence_service.py # AES-256-GCM transparent database persistence\n"
-        "│   │   │   ├── scheduler.py           # Background cron monitor (Gmail, Deadlines, Reminders)\n"
-        "│   │   │   └── push_notification_service.py # Firebase Cloud Messaging dispatcher\n"
-        "│   │   ├── models/            # Pydantic v2 schemas & database models\n"
-        "│   │   └── api/               # FastAPI REST router definitions (/api/v1/*)\n"
-        "│   └── data/                  # Seed datasets & evaluation benchmarks\n"
-        "└── frontend/                  # Cross-platform Flutter client application\n"
-        "    └── lib/\n"
-        "        ├── screens/           # UI Screens (Home Inbox, Deadlines, Reminders, Attention)\n"
-        "        ├── services/          # REST API client & notification listeners\n"
-        "        └── dto/               # Frozen Data Transfer Object mappings"
+        "|-- backend/\n"
+        "|   |-- app/\n"
+        "|   |   |-- agents/            # Multi-agent implementations & rule engines\n"
+        "|   |   |   |-- intake_agent.py        # RFC 2822 parser & HTML sanitization\n"
+        "|   |   |   |-- triage_agent.py        # Cascaded triage (Deterministic -> ML -> LLM)\n"
+        "|   |   |   |-- triage_rules.py        # Domain keyword & sender rule tables\n"
+        "|   |   |   |-- action_agent.py        # Imperative task extraction engine\n"
+        "|   |   |   |-- deadline_agent.py      # Relative temporal parsing & ISO normalization\n"
+        "|   |   |   |-- priority_agent.py      # Multi-factor dynamic priority scoring\n"
+        "|   |   |   |-- amar_orchestrator.py   # Deterministic arbitration & routing coordinator\n"
+        "|   |   |-- ml/                # Local machine learning pipeline\n"
+        "|   |   |   |-- email_classifier.py    # Sklearn runtime inference wrapper & caching\n"
+        "|   |   |   |-- training.py            # TF-IDF + Logistic Regression training pipeline\n"
+        "|   |   |   |-- train.py               # CLI training entrypoint\n"
+        "|   |   |   |-- evaluate.py            # Offline benchmark evaluation framework\n"
+        "|   |   |   |-- feedback_dataset.py    # Active learning feedback collector\n"
+        "|   |   |-- services/          # Core backend infrastructure services\n"
+        "|   |   |   |-- gmail_sync_service.py  # Incremental Gmail History API synchronization\n"
+        "|   |   |   |-- persistence_service.py # AES-256-GCM transparent database persistence\n"
+        "|   |   |   |-- scheduler.py           # Background cron monitor (Gmail, Deadlines, Reminders)\n"
+        "|   |   |   |-- push_notification_service.py # Firebase Cloud Messaging dispatcher\n"
+        "|   |   |-- models/            # Pydantic v2 schemas & database models\n"
+        "|   |   |-- api/               # FastAPI REST router definitions (/api/v1/*)\n"
+        "|   |-- data/                  # Seed datasets & evaluation benchmarks\n"
+        "|-- frontend/                  # Cross-platform Flutter client application\n"
+        "    |-- lib/\n"
+        "        |-- screens/           # UI Screens (Home Inbox, Deadlines, Reminders, Attention)\n"
+        "        |-- services/          # REST API client & notification listeners\n"
+        "        |-- dto/               # Frozen Data Transfer Object mappings"
     )
     add_callout_box(doc, tree_text, "CODEBASE REPOSITORY STRUCTURE & MODULE TREES")
     
@@ -575,7 +605,7 @@ def build_da2_report(output_path):
     add_callout_box(doc, demo_trace_2, "LIVE DEMONSTRATION TRACE 2: PHISHING SIMULATION & SAFETY GUARDRAILS")
     
     # Chapter 6: Experimentation and Results
-    add_heading_1(doc, "Chapter 6 – Experimentation and Results")
+    add_heading_1(doc, "Chapter 6 - Experimentation and Results")
     add_heading_2(doc, "6.1 Classification Performance Metrics")
     add_body_p(doc, "The system was evaluated against the held-out benchmark corpus across all 15 operational categories. Precision (P), Recall (R), and F1-score are computed as: Precision = TP / (TP + FP), Recall = TP / (TP + FN), and F1 = 2 * (P * R) / (P + R).")
     
@@ -597,9 +627,9 @@ def build_da2_report(output_path):
         ["`SPAM`", "3", "1.000", "1.000", "**1.000**", "None (Phishing heuristics matched)"],
         ["`SOCIAL`", "3", "1.000", "1.000", "**1.000**", "None (Social network sender headers)"],
         ["`OTHER`", "6", "0.833", "0.833", "**0.833**", "1 project note absorbed"],
-        ["**Macro Average**", "**58**", "**0.949**", "**0.937**", "**0.914**", "—"],
-        ["**Weighted Average**", "**58**", "**0.938**", "**0.931**", "**0.932**", "—"],
-        ["**Overall Accuracy**", "**58**", "—", "—", "**93.1%**", "**(54 Correct / 58 Total)**"]
+        ["**Macro Average**", "**58**", "**0.949**", "**0.937**", "**0.914**", "-"],
+        ["**Weighted Average**", "**58**", "**0.938**", "**0.931**", "**0.932**", "-"],
+        ["**Overall Accuracy**", "**58**", "-", "-", "**93.1%**", "**(54 Correct / 58 Total)**"]
     ]
     t_tab1 = doc.add_table(rows=1, cols=len(tab1_headers))
     style_table(t_tab1, tab1_widths, tab1_headers, tab1_data)
@@ -630,9 +660,9 @@ def build_da2_report(output_path):
     add_heading_2(doc, "6.3 Inference Routing Distribution & Resource Optimization")
     routing_box = (
         "INFERENCE ROUTING DISTRIBUTION (N = 58 emails):\n"
-        "  • Deterministic Rules (Layer 1)    : 19 / 58 emails (32.8%)\n"
-        "  • Local Calibrated ML (Layer 1.5)  : 26 / 58 emails (44.8%)\n"
-        "  • Escalated Cloud LLM (Layer 2)    : 13 / 58 emails (22.4%)\n"
+        "  - Deterministic Rules (Layer 1)    : 19 / 58 emails (32.8%)\n"
+        "  - Local Calibrated ML (Layer 1.5)  : 26 / 58 emails (44.8%)\n"
+        "  - Escalated Cloud LLM (Layer 2)    : 13 / 58 emails (22.4%)\n"
         "  ---------------------------------------------------------------\n"
         "  TOTAL LOCAL OFFLOAD RATE           : 45 / 58 emails (77.6% LLM Avoidance)"
     )
@@ -651,32 +681,24 @@ def build_da2_report(output_path):
     
     add_heading_2(doc, "6.4 System Latency, Response Time & Computational Footprint")
     add_body_p(doc, "Benchmarking was conducted on a commodity quad-core workstation (AMD Ryzen 7, 16 GB RAM) without GPU acceleration:")
-    add_bullet_p(doc, "Median latency = 0.82 ms.", "• Mail Intake & Sanitization:")
-    add_bullet_p(doc, "Median latency = 0.65 ms.", "• Deterministic Rule Scoring:")
-    add_bullet_p(doc, "Median latency = 3.12 ms (95th percentile = 4.25 ms).", "• Local ML Feature Extraction & Prediction:")
-    add_bullet_p(doc, "Median latency = 1.15 ms.", "• AES-256-GCM Encryption & Database Write:")
-    add_bullet_p(doc, "< 12.0 ms for 77.6% of emails.", "• End-to-End Local Execution Latency:")
-    add_bullet_p(doc, "1,240 ms (mean streaming duration).", "• Escalated LLM Round-Trip Latency:")
-    add_bullet_p(doc, "Fitting the TF-IDF vectorizer and balanced Logistic Regression objective required 0.72 seconds.", "• Model Training Time:")
-    add_bullet_p(doc, "342 KB on disk (email_classifier.joblib).", "• Persistent Model Artifact Size:")
-    add_bullet_p(doc, "114 MB (FastAPI backend + ML runtime bundle).", "• Peak Process Resident Memory (RAM):")
+    add_bullet_p(doc, "Median latency = 0.82 ms.", "Mail Intake & Sanitization:")
+    add_bullet_p(doc, "Median latency = 0.65 ms.", "Deterministic Rule Scoring:")
+    add_bullet_p(doc, "Median latency = 3.12 ms (95th percentile = 4.25 ms).", "Local ML Feature Extraction & Prediction:")
+    add_bullet_p(doc, "Median latency = 1.15 ms.", "AES-256-GCM Encryption & Database Write:")
+    add_bullet_p(doc, "< 12.0 ms for 77.6% of emails.", "End-to-End Local Execution Latency:")
+    add_bullet_p(doc, "1,240 ms (mean streaming duration).", "Escalated LLM Round-Trip Latency:")
+    add_bullet_p(doc, "Fitting the TF-IDF vectorizer and balanced Logistic Regression objective required 0.72 seconds.", "Model Training Time:")
+    add_bullet_p(doc, "342 KB on disk (email_classifier.joblib).", "Persistent Model Artifact Size:")
+    add_bullet_p(doc, "114 MB (FastAPI backend + ML runtime bundle).", "Peak Process Resident Memory (RAM):")
     
     add_heading_2(doc, "6.5 Safety-Critical Verification & Zero-Leakage Privacy")
     add_bullet_p(doc, "Verified against 18 institutional circulars originating from @college.edu. In 100% of cases, the deterministic orchestrator overrode any ambiguous feature signals, strictly preventing false-positive spam filtering.", "1. Institutional Domain Protection:")
     add_bullet_p(doc, "Inspection of SQLite raw binary storage confirmed that email bodies, subject strings, sender identities, and action notes contained zero plaintext tokens, persisting strictly as AES-256-GCM ciphertexts with 128-bit authentication tags. The SHA-256 tamper-evident ledger verified 100% hash consistency across all 58 insertions.", "2. Cryptographic Integrity & Auditability:")
     
-    add_heading_2(doc, "6.6 Project Contribution Matrix")
-    contrib_headers = ["Team Member / Contributor", "Module / Subsystem Responsibility", "Specific Technical Deliverables & Commits"]
-    contrib_widths = [1.6, 2.2, 2.7]
-    contrib_data = [
-        ["**S. MIRTTUL**\n(Roll No.: **24BRS1428**)", "**Multi-Agent Orchestration, Machine Learning Pipeline, & Evaluation Framework**", "• Implemented deterministic AMAROrchestrator conflict resolution matrix and domain precedence rules.\n• Developed cascaded TriageAgent (sublinear TF-IDF + calibrated Logistic Regression with C=30.0, confidence gating tau >= 0.70, and structured LLM fallback).\n• Engineered ActionAgent imperative verb parser and DeadlineAgent relative temporal resolution to ISO-8601 UTC timestamps.\n• Formulated mathematical equations, loss calibration, and developed offline benchmark evaluation suite (evaluate.py, training.py).\n• Conducted 15-class experimental evaluation, confusion matrix generation, and drafted Chapters 3 & 6."],
-        ["**ADITYA SRIKANTH**\n(Roll No.: **24BRS1437**)", "**Data Ingestion, Cryptographic Security, Priority Engine, & Client Delivery**", "• Engineered MailIntakeAgent for RFC 2822 MIME parsing, HTML tag stripping, Unicode NFKC normalization, and PII/credential redaction.\n• Developed GmailSyncService integrating Google OAuth 2.0 and incremental Gmail History API sync with stateful historyId baselining.\n• Designed transparent AES-256-GCM data-at-rest encryption layer and SHA-256 tamper-evident append-only audit ledger.\n• Implemented PriorityAgent context weighting, MonitorScheduler asynchronous cron loops, and multi-tier deadline escalation ladder (NORMAL -> REMINDER -> URGENT -> ALARM).\n• Built Firebase Cloud Messaging (FCM) background push service and developed cross-platform Flutter client UI application (Chapters 4 & 5)."]
-    ]
-    t_contrib = doc.add_table(rows=1, cols=len(contrib_headers))
-    style_table(t_contrib, contrib_widths, contrib_headers, contrib_data)
+    # (Section 6.6 Project Contribution Matrix has been removed per user instructions)
     
     # Chapter 7: Conclusion
-    add_heading_1(doc, "Chapter 7 – Conclusion and Future Work")
+    add_heading_1(doc, "Chapter 7 - Conclusion and Future Work")
     add_body_p(doc, "AGENT AMAR successfully demonstrates that an autonomous, multi-agent hybrid architecture coordinated by a deterministic mathematical orchestrator resolves the fundamental trade-offs between accuracy, inference latency, financial cost, and user privacy in email productivity systems. By cascading routine classifications through calibrated local models and reserving generative LLMs strictly for complex edge cases, the system achieves an overall classification accuracy of 93.1%, reduces LLM reliance by 77.6%, executes local predictions in sub-4 milliseconds, and provides 100% recall on mission-critical academic examination and placement notices.")
     add_body_p(doc, "Future work will expand the active learning feedback loop to dynamically adjust personal sender reputation weights, incorporate multi-lingual embedding models (XLM-RoBERTa) for cross-lingual university communications, and implement on-device CoreML / TFLite inference directly within the Flutter client application.")
     
@@ -685,7 +707,7 @@ def build_da2_report(output_path):
     add_body_p(doc, "The complete, end-to-end source code, training datasets, evaluation suites, and database migrations are published at: https://github.com/24f2005141/AGENT_AMAR | Committed Revision: e2d65bf (Main Branch)")
     
     doc.save(output_path)
-    print(f"Successfully generated: {output_path}")
+    print(f"Successfully generated clean DA2 report: {output_path}")
 
 if __name__ == "__main__":
     out_file = os.path.join("docs", "reviews", "DA2_REVIEW_2_REPORT.docx")

@@ -1,5 +1,6 @@
 """
-AGENT AMAR - DOCX Report Generator for Review 1 (DA1)
+AGENT AMAR - Clean DOCX Report Generator for Review 1 (DA1)
+Formats cleanly without unreadable symbols and with Contribution Matrix removed.
 """
 
 import os
@@ -125,6 +126,7 @@ def add_header_footer(doc, header_text, footer_text):
     section.right_margin = Inches(1.0)
     section.different_first_page_header_footer = False
     
+    # Header
     header = section.header
     hp = header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
@@ -134,16 +136,40 @@ def add_header_footer(doc, header_text, footer_text):
     hrun.font.italic = True
     hrun.font.color.rgb = COLOR_MUTED
     
+    # Footer: Two-cell borderless table for robust left/right alignment
     footer = section.footer
-    fp = footer.paragraphs[0]
-    fp.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    frun1 = fp.add_run(footer_text + "\t\tPage ")
-    frun1.font.name = "Calibri"
-    frun1.font.size = Pt(8.5)
-    frun1.font.color.rgb = COLOR_MUTED
+    p_orig = footer.paragraphs[0]
+    p_orig.text = ""
     
+    tbl_footer = footer.add_table(rows=1, cols=2, width=Inches(6.5))
+    tbl_footer.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_footer.autofit = False
+    
+    # Left cell
+    c_left = tbl_footer.cell(0, 0)
+    c_left.width = Inches(4.8)
+    p_l = c_left.paragraphs[0]
+    p_l.paragraph_format.space_before = Pt(0)
+    p_l.paragraph_format.space_after = Pt(0)
+    p_l.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    r_l = p_l.add_run(footer_text)
+    r_l.font.name = "Calibri"
+    r_l.font.size = Pt(8.5)
+    r_l.font.color.rgb = COLOR_MUTED
+    
+    # Right cell
+    c_right = tbl_footer.cell(0, 1)
+    c_right.width = Inches(1.7)
+    p_r = c_right.paragraphs[0]
+    p_r.paragraph_format.space_before = Pt(0)
+    p_r.paragraph_format.space_after = Pt(0)
+    p_r.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r_r = p_r.add_run("Page ")
+    r_r.font.name = "Calibri"
+    r_r.font.size = Pt(8.5)
+    r_r.font.color.rgb = COLOR_MUTED
     fld = parse_xml(r'<w:fldSimple %s w:instr="PAGE"/>' % nsdecls('w'))
-    fp._p.append(fld)
+    p_r._p.append(fld)
 
 def add_callout_box(doc, text_content, label=""):
     table = doc.add_table(rows=1, cols=1)
@@ -233,11 +259,13 @@ def add_body_p(doc, text, bold_prefix="", italic=False):
     p.paragraph_format.space_after = Pt(4)
     p.paragraph_format.line_spacing = 1.15
     if bold_prefix:
-        r_bold = p.add_run(bold_prefix + " ")
-        r_bold.font.name = "Calibri"
-        r_bold.font.size = Pt(10)
-        r_bold.font.bold = True
-        r_bold.font.color.rgb = COLOR_DARK
+        clean_prefix = bold_prefix.lstrip("•- \t").strip()
+        if clean_prefix:
+            r_bold = p.add_run(clean_prefix + " ")
+            r_bold.font.name = "Calibri"
+            r_bold.font.size = Pt(10)
+            r_bold.font.bold = True
+            r_bold.font.color.rgb = COLOR_DARK
     r_body = p.add_run(text)
     r_body.font.name = "Calibri"
     r_body.font.size = Pt(10)
@@ -251,11 +279,13 @@ def add_bullet_p(doc, text, bold_prefix=""):
     p.paragraph_format.space_after = Pt(2)
     p.paragraph_format.line_spacing = 1.15
     if bold_prefix:
-        r_bold = p.add_run(bold_prefix + " ")
-        r_bold.font.name = "Calibri"
-        r_bold.font.size = Pt(10)
-        r_bold.font.bold = True
-        r_bold.font.color.rgb = COLOR_DARK
+        clean_prefix = bold_prefix.lstrip("•- \t").strip()
+        if clean_prefix:
+            r_bold = p.add_run(clean_prefix + " ")
+            r_bold.font.name = "Calibri"
+            r_bold.font.size = Pt(10)
+            r_bold.font.bold = True
+            r_bold.font.color.rgb = COLOR_DARK
     r_body = p.add_run(text)
     r_body.font.name = "Calibri"
     r_body.font.size = Pt(10)
@@ -284,12 +314,12 @@ def add_centered_image(doc, image_path, width_in_inches=6.5, caption_text=""):
             run_cap.font.color.rgb = COLOR_MUTED
 
 def build_da1_report(output_path):
-    print(f"Building DA1 Review 1 report -> {output_path}")
+    print(f"Building DA1 Review 1 report (Clean, No Contribution Matrix) -> {output_path}")
     doc = docx.Document()
     
     add_header_footer(
         doc,
-        "COURSE MINI PROJECT — REVIEW 1 REPORT (DA1)",
+        "COURSE MINI PROJECT - REVIEW 1 REPORT (DA1)",
         "AGENT AMAR | S. MIRTTUL (24BRS1428) & ADITYA SRIKANTH (24BRS1437)"
     )
     
@@ -297,7 +327,7 @@ def build_da1_report(output_path):
     p_title = doc.add_paragraph()
     p_title.paragraph_format.space_before = Pt(0)
     p_title.paragraph_format.space_after = Pt(2)
-    r_title = p_title.add_run("COURSE MINI PROJECT — REVIEW 1 REPORT (DA1)")
+    r_title = p_title.add_run("COURSE MINI PROJECT - REVIEW 1 REPORT (DA1)")
     r_title.font.name = "Calibri"
     r_title.font.size = Pt(17)
     r_title.font.bold = True
@@ -312,12 +342,13 @@ def build_da1_report(output_path):
     r_sub.font.bold = True
     r_sub.font.color.rgb = COLOR_SECONDARY
     
-    # Meta Box
+    # Meta Box (Cleaned, No Contribution breakdown)
     meta_box = (
-        "Course Component: Design Assessment 1 (DA1) — Review 1\n"
-        "Authors / Team Members:\n"
-        "  • S. MIRTTUL (Roll No.: 24BRS1428) — Multi-Agent Orchestration, ML Pipeline, Loss Formalization & Benchmark Evaluation\n"
-        "  • ADITYA SRIKANTH (Roll No.: 24BRS1437) — Data Ingestion, AES-256-GCM Security, Priority Engine, FCM & Flutter UI\n"
+        "Course Component: Design Assessment 1 (DA1) - Review 1\n"
+        "Project Title: AGENT AMAR\n"
+        "Team Members:\n"
+        "  - S. MIRTTUL (Roll No.: 24BRS1428)\n"
+        "  - ADITYA SRIKANTH (Roll No.: 24BRS1437)\n"
         "GitHub Repository: https://github.com/24f2005141/AGENT_AMAR\n"
         "Dataset Permalinks:\n"
         "  - Core Training Pipeline: backend/app/ml/training.py\n"
@@ -329,11 +360,11 @@ def build_da1_report(output_path):
     add_callout_box(doc, meta_box, "PROJECT METADATA & CODE PERMALINKS")
     
     # Section 1: Problem Identification
-    add_heading_1(doc, "1. Problem Identification — Domain and Motivation")
+    add_heading_1(doc, "1. Problem Identification - Domain and Motivation")
     add_heading_2(doc, "1.1 Application Domain & Global Significance")
-    add_body_p(doc, "Electronic mail remains the foundational backbone of global professional, academic, and administrative communication. However, the exponential expansion of digital communication channels has transformed email from an asynchronous productivity tool into a primary source of cognitive exhaustion and informational paralysis. According to longitudinal market telemetry by the Radicati Group Email Statistics Report (2023–2027), over 347.3 billion emails are transmitted and received globally each day, a figure projected to surpass 392.5 billion daily emails by 2026.")
+    add_body_p(doc, "Electronic mail remains the foundational backbone of global professional, academic, and administrative communication. However, the exponential expansion of digital communication channels has transformed email from an asynchronous productivity tool into a primary source of cognitive exhaustion and informational paralysis. According to longitudinal market telemetry by the Radicati Group Email Statistics Report (2023-2027), over 347.3 billion emails are transmitted and received globally each day, a figure projected to surpass 392.5 billion daily emails by 2026.")
     add_body_p(doc, "In professional and academic ecosystems, empirical workforce studies conducted by the McKinsey Global Institute demonstrate that modern knowledge workers and researchers dedicate an average of 28% of their entire workweek (equivalent to approximately 13 hours per week or over 650 hours annually) exclusively to reading, filtering, categorizing, and drafting email communications. Furthermore, human-computer interaction (HCI) research from the University of California, Irvine (Mark et al., ACM CHI) indicates that an individual interrupted by incoming email alerts requires an average of 23 minutes and 15 seconds to regain full immersion in their original cognitive task. The constant cognitive context-switching induced by unorganized inboxes causes acute attention fragmentation, elevated cortisol levels, and chronic burnout.")
-    add_body_p(doc, "In university environments, higher education students, research scholars, and academic faculty receive hundreds of heterogeneous, semi-structured messages daily—ranging from critical placement recruitment deadlines, course exam circulars, and laboratory assignment submissions to marketing newsletters, social digests, and malicious phishing attempts. A survey conducted by the American Psychological Association (APA) found that 78% of enrolled university students experienced measurable anxiety directly linked to missed academic submission deadlines and buried career opportunities resulting from email clutter. Existing commercial email solutions rely on broad sender-based clustering or rigid heuristic rules; they fail to understand contextual urgency, cannot reliably parse fuzzy or relative deadlines (e.g., 'submit your clearance form by next Friday at 5:00 PM'), and do not actively escalate pending commitments to physical alert modalities.")
+    add_body_p(doc, "In university environments, higher education students, research scholars, and academic faculty receive hundreds of heterogeneous, semi-structured messages daily - ranging from critical placement recruitment deadlines, course exam circulars, and laboratory assignment submissions to marketing newsletters, social digests, and malicious phishing attempts. A survey conducted by the American Psychological Association (APA) found that 78% of enrolled university students experienced measurable anxiety directly linked to missed academic submission deadlines and buried career opportunities resulting from email clutter. Existing commercial email solutions rely on broad sender-based clustering or rigid heuristic rules; they fail to understand contextual urgency, cannot reliably parse fuzzy or relative deadlines (e.g., 'submit your clearance form by next Friday at 5:00 PM'), and do not actively escalate pending commitments to physical alert modalities.")
     
     add_heading_2(doc, "1.2 Identified Stakeholders and Decision Support Capabilities")
     add_body_p(doc, "The primary stakeholders of the AGENT AMAR system comprise:")
@@ -342,14 +373,14 @@ def build_da1_report(output_path):
     add_bullet_p(doc, "Operating in communication-intensive roles where prompt action item resolution directly governs operational success.", "3. Enterprise Knowledge Workers & Junior Professionals:")
     
     add_body_p(doc, "AGENT AMAR directly supports the following four concrete operational decisions:")
-    add_bullet_p(doc, "Determines whether an incoming message belongs to actionable high-stakes categories (Internship, Placement, Exam, Assignment, Faculty Announcement, Reply Required) or passive background noise (Promotions, Newsletters, Social, Spam), eliminating manual sorting fatigue.", "• Autonomous Inbox Triage Decision:")
-    add_bullet_p(doc, "Isolates concrete commitments, required forms, and external URLs embedded in message bodies, transforming passive prose into structured, trackable tasks.", "• Action Identification & Task Extraction Decision:")
-    add_bullet_p(doc, "Normalizes ambiguous or relative date-time mentions into authoritative UTC ISO-8601 timestamps and computes dynamic proximity horizons (e.g., OVERDUE, WITHIN_1H, WITHIN_24H, WITHIN_7D).", "• Temporal Proximity & Scheduling Decision:")
-    add_bullet_p(doc, "Evaluates a composite priority score S in [0, 100] to decide the appropriate delivery mechanism—ranging from silent inbox storage to high-priority push notifications and urgent device-level audible alarm dialogs.", "• Multi-Modal Escalation & Alert Decision:")
+    add_bullet_p(doc, "Determines whether an incoming message belongs to actionable high-stakes categories (Internship, Placement, Exam, Assignment, Faculty Announcement, Reply Required) or passive background noise (Promotions, Newsletters, Social, Spam), eliminating manual sorting fatigue.", "Autonomous Inbox Triage Decision:")
+    add_bullet_p(doc, "Isolates concrete commitments, required forms, and external URLs embedded in message bodies, transforming passive prose into structured, trackable tasks.", "Action Identification & Task Extraction Decision:")
+    add_bullet_p(doc, "Normalizes ambiguous or relative date-time mentions into authoritative UTC ISO-8601 timestamps and computes dynamic proximity horizons (e.g., OVERDUE, WITHIN_1H, WITHIN_24H, WITHIN_7D).", "Temporal Proximity & Scheduling Decision:")
+    add_bullet_p(doc, "Evaluates a composite priority score S in [0, 100] to decide the appropriate delivery mechanism - ranging from silent inbox storage to high-priority push notifications and urgent device-level audible alarm dialogs.", "Multi-Modal Escalation & Alert Decision:")
     
     # Section 2: Literature Survey
     add_heading_1(doc, "2. Literature Survey")
-    add_body_p(doc, "The literature survey examines 16 peer-reviewed research papers published in prestigious computer science venues (IEEE, ACM, Elsevier, Springer, ACL, EMNLP, NeurIPS, and ICML). Over 75% of the surveyed works (12 out of 16) were published within the last three years (2023–2025/2026), reflecting the recent transition from static supervised classifiers toward generative Large Language Models (LLMs) and autonomous multi-agent cooperative architectures.")
+    add_body_p(doc, "The literature survey examines 16 peer-reviewed research papers published in prestigious computer science venues (IEEE, ACM, Elsevier, Springer, ACL, EMNLP, NeurIPS, and ICML). Over 75% of the surveyed works (12 out of 16) were published within the last three years (2023-2025/2026), reflecting the recent transition from static supervised classifiers toward generative Large Language Models (LLMs) and autonomous multi-agent cooperative architectures.")
     
     add_heading_2(doc, "2.1 Comparative Literature Analysis Table")
     
@@ -378,21 +409,21 @@ def build_da1_report(output_path):
     style_table(t_survey, survey_widths, survey_headers, survey_data)
     
     add_heading_2(doc, "2.2 Derived Research Gaps")
-    add_bullet_p(doc, "Contemporary generative AI solutions ([1], [13]) route every incoming message indiscriminately through frontier cloud-hosted LLMs. While accurate, this approach incurs substantial financial overhead (~$0.02–$0.05 per email), high network latency (>1.5–3.0 seconds per call), and fails completely during network dropouts or API rate-limit exhaustion. Although cascading techniques exist ([3], [11]), they have not been applied to multi-class academic triage coupled with local, offline CPU-bound classifiers.", "Research Gap 1: High Latency, Prohibitive Cost, and Fragility of Monolithic LLM Inboxes.")
+    add_bullet_p(doc, "Contemporary generative AI solutions ([1], [13]) route every incoming message indiscriminately through frontier cloud-hosted LLMs. While accurate, this approach incurs substantial financial overhead (~$0.02-$0.05 per email), high network latency (>1.5-3.0 seconds per call), and fails completely during network dropouts or API rate-limit exhaustion. Although cascading techniques exist ([3], [11]), they have not been applied to multi-class academic triage coupled with local, offline CPU-bound classifiers.", "Research Gap 1: High Latency, Prohibitive Cost, and Fragility of Monolithic LLM Inboxes.")
     add_bullet_p(doc, "Existing literature treats email categorization ([5], [6]), action item identification ([9], [13]), and temporal relation extraction ([7], [10]) as disjoint academic tasks evaluated on isolated benchmark sets. Real-world email productivity requires a unified, contextual pipeline where triage categories dynamically gate action item extraction and ground relative deadlines into an actionable calendar horizon.", "Research Gap 2: Architectural Decoupling of Classification, Action Extraction, and Temporal Grounding.")
     add_bullet_p(doc, "Multi-agent LLM systems ([2], [4]) rely on unconstrained natural language dialogues between agents, resulting in non-deterministic outcomes, hallucinated deadlines, and vulnerability to prompt injections. No surveyed system incorporates a deterministic mathematical orchestrator enforcing explicit precedence rules (e.g., ensuring verified academic circulars from institutional domains are never labeled as promotional noise or spam).", "Research Gap 3: Absence of Deterministic Safety, Conflict Arbitration, and Hard Precedence Rules.")
     add_bullet_p(doc, "Prior research predominantly comprises offline Python experiments or static benchmark evaluations. None provide an end-to-end operational architecture featuring Google OAuth 2.0 incremental synchronization (via Gmail History API), field-level cryptographic encryption at rest (AES-256-GCM), background cron scheduling, and multi-tier mobile push delivery (FCM to Flutter client).", "Research Gap 4: Lack of Privacy-Preserving, End-to-End Client-Server Orchestration with Proactive Escalation.")
     
     # Section 3: Problem Statement
     add_heading_1(doc, "3. Problem Statement")
-    add_body_p(doc, "Given a continuous asynchronous stream of raw, semi-structured multi-field email messages e in E (each comprising RFC 2822 metadata, sender domain strings, unstandardized HTML/plain-text bodies up to 50,000 characters, and variable timestamp markers) arriving under severe class imbalance across 15 distinct semantic categories, the objective is to design, implement, and evaluate an autonomous multi-agent system coordinated by a deterministic orchestrator that maps each incoming email into a structured decision tuple y = <c*, S, A, D, r>—where c* represents the validated primary triage category, S in [0, 100] is a dynamic multi-factor priority score, A is a set of canonical imperative action items, D contains ISO-8601 UTC-grounded deadlines, and r in {store, notify, monitor, label} denotes downstream routing directives—subject to strict local privacy constraints (AES-256-GCM zero-leakage persistence), sub-5 ms local inference latency for predictable emails, and zero data loss, such that the system achieves a multi-class triage Macro-F1 >= 0.90 across all 15 categories, extracts action items and deadlines with an Exact Match F1 >= 0.85, and offloads at least 65% of classification volume to a local CPU-bound calibrated linear classifier without degrading top-1 decision accuracy relative to a monolithic zero-shot frontier LLM baseline (Gemini / GPT-4), while guaranteeing 100% recall on critical academic examination and campus placement alerts.")
+    add_body_p(doc, "Given a continuous asynchronous stream of raw, semi-structured multi-field email messages e in E (each comprising RFC 2822 metadata, sender domain strings, unstandardized HTML/plain-text bodies up to 50,000 characters, and variable timestamp markers) arriving under severe class imbalance across 15 distinct semantic categories, the objective is to design, implement, and evaluate an autonomous multi-agent system coordinated by a deterministic orchestrator that maps each incoming email into a structured decision tuple y = <c*, S, A, D, r> - where c* represents the validated primary triage category, S in [0, 100] is a dynamic multi-factor priority score, A is a set of canonical imperative action items, D contains ISO-8601 UTC-grounded deadlines, and r in {store, notify, monitor, label} denotes downstream routing directives - subject to strict local privacy constraints (AES-256-GCM zero-leakage persistence), sub-5 ms local inference latency for predictable emails, and zero data loss, such that the system achieves a multi-class triage Macro-F1 >= 0.90 across all 15 categories, extracts action items and deadlines with an Exact Match F1 >= 0.85, and offloads at least 65% of classification volume to a local CPU-bound calibrated linear classifier without degrading top-1 decision accuracy relative to a monolithic zero-shot frontier LLM baseline (Gemini / GPT-4), while guaranteeing 100% recall on critical academic examination and campus placement alerts.")
     
     add_heading_2(doc, "3.1 Problem Statement Element Breakdown")
     ps_headers = ["Element", "Formal Specification within AGENT AMAR"]
     ps_widths = [1.5, 5.0]
     ps_data = [
-        ["**Input**", "Multi-field unstructured email payloads e = <Subject, Body, Sender, Domain, ReceivedAt, Attachments>, where |Body| <= 50,000 characters, arriving incrementally via Gmail History API at burst volumes of 10–200 messages/hour."],
-        ["**Output**", "Structured Decision Tuple y = <c*, S, A, D, r, tau_audit>, where c* in C_15 is the primary category, S in [0, 100] is the priority score, A represents canonical action strings, D represents ISO-8601 UTC timestamps, r represents routing flags, and tau_audit is the cryptographic audit trace."],
+        ["**Input**", "Multi-field unstructured email payloads e = <Subject, Body, Sender, Domain, ReceivedAt, Attachments>, where |Body| <= 50,000 characters, arriving incrementally via Gmail History API at burst volumes of 10-200 messages/hour."],
+        ["**Output**", "Structured Decision Tuple y = <c*, S, A, D, r, tau_audit>, where c* in 15 categories is the primary category, S in [0, 100] is the priority score, A represents canonical action strings, D represents ISO-8601 UTC timestamps, r represents routing flags, and tau_audit is the cryptographic audit trace."],
         ["**Constraints**", "Severe class imbalance (academic exams/placements <5% vs. newsletters/promotions >60%), ambiguous relative dates ('submit by tomorrow evening'), zero plaintext PII persistence (AES-256-GCM encryption), strict cost ceilings, and hard execution latency constraints (<5 ms local ML, <2.5 s for LLM fallback)."],
         ["**Success Criterion**", "Multi-class triage Macro-F1 >= 0.90, Action & Deadline Extraction F1 >= 0.85, >=65% LLM offloading rate, <=5% error degradation relative to monolithic GPT-4/Gemini baselines, and 100% Recall on critical exam and placement alerts."]
     ]
@@ -431,7 +462,7 @@ def build_da1_report(output_path):
     add_callout_box(doc, math_equations, "MATHEMATICAL FORMULATIONS & GATING EQUATIONS")
     
     add_heading_3(doc, "Tensor Representations & Layer Dimensions:")
-    add_bullet_p(doc, "Unstructured string t in Sigma* generated via build_feature_text().", "1. Input Representation:")
+    add_bullet_p(doc, "Unstructured string t generated via build_feature_text().", "1. Input Representation:")
     add_bullet_p(doc, "Sparse feature tensor x in R^(1 x D), where D in [5,000, 20,000] represents unigram and bigram vocabulary terms with sublinear logarithmic scaling tf' = 1 + log(tf) and L2 normalization.", "2. Feature Extraction Layer:")
     add_bullet_p(doc, "Weight tensor W in R^(15 x D) and bias vector b in R^15.", "3. Classification Dense Projection:")
     add_bullet_p(doc, "Probability vector y_hat = softmax(W*x + b) in [0, 1]^15.", "4. Softmax Output Distribution:")
@@ -444,18 +475,18 @@ def build_da1_report(output_path):
     add_bullet_p(doc, "Transmitting or storing raw unencrypted email data introduces catastrophic privacy and compliance risks. Following the edge-cloud data security principles of Radford & Narasimhan (IEEE TBD 2024) [15], AGENT AMAR encrypts all PII and sensitive text fields at the application boundary using authenticated Galois/Counter Mode (GCM), ensuring zero-knowledge database persistence with sub-millisecond cryptographic overhead.", "4. Transparent AES-256-GCM Cryptographic Persistence:")
     
     add_heading_2(doc, "4.4 Planned Experimental Setup")
-    add_bullet_p(doc, "Synthetic & Annotated Academic Corpus (350+ multi-class emails spanning all 15 operational categories with edge cases), MailEx Benchmark Subset [1], and BC3 Corpus [9].", "• Benchmark Datasets:")
-    add_bullet_p(doc, "Stratified train / validation / test partitioning (70% training, 15% validation for hyperparameter tuning of tau and C, 15% held-out test evaluation).", "• Split Strategy:")
-    add_bullet_p(doc, "Precision, Recall, Macro-F1, Weighted-F1, Expected Calibration Error (ECE), Exact Match (EM) F1, Mean Latency (ms), and Local Offload Rate (%).", "• Evaluation Metrics:")
-    add_bullet_p(doc, "Baseline 1 (Monolithic Zero-Shot LLM: Gemini / GPT-4), Baseline 2 (Fine-Tuned DistilBERT / RoBERTa), Baseline 3 (Pure Rule-Based Regex Engine).", "• Baselines for Comparison:")
-    add_bullet_p(doc, "Standard quad-core / octa-core CPU (Ryzen 7 / Core i7), 16 GB RAM, Windows 11 / Ubuntu Linux (Zero specialized GPU requirement).", "• Hardware & Environment:")
-    add_bullet_p(doc, "Ablation 1 (Threshold Sensitivity tau in [0.50, 0.95]), Ablation 2 (Regularization Parameter C in {0.1, 1.0, 10.0, 30.0, 100.0}), Ablation 3 (Deterministic Arbitration Matrix Impact), Ablation 4 (Ablation of Action & Deadline Agents).", "• Planned Ablation Studies:")
+    add_bullet_p(doc, "Synthetic & Annotated Academic Corpus (350+ multi-class emails spanning all 15 operational categories with edge cases), MailEx Benchmark Subset [1], and BC3 Corpus [9].", "Benchmark Datasets:")
+    add_bullet_p(doc, "Stratified train / validation / test partitioning (70% training, 15% validation for hyperparameter tuning of tau and C, 15% held-out test evaluation).", "Split Strategy:")
+    add_bullet_p(doc, "Precision, Recall, Macro-F1, Weighted-F1, Expected Calibration Error (ECE), Exact Match (EM) F1, Mean Latency (ms), and Local Offload Rate (%).", "Evaluation Metrics:")
+    add_bullet_p(doc, "Baseline 1 (Monolithic Zero-Shot LLM: Gemini / GPT-4), Baseline 2 (Fine-Tuned DistilBERT / RoBERTa), Baseline 3 (Pure Rule-Based Regex Engine).", "Baselines for Comparison:")
+    add_bullet_p(doc, "Standard quad-core / octa-core CPU (Ryzen 7 / Core i7), 16 GB RAM, Windows 11 / Ubuntu Linux (Zero specialized GPU requirement).", "Hardware & Environment:")
+    add_bullet_p(doc, "Ablation 1 (Threshold Sensitivity tau in [0.50, 0.95]), Ablation 2 (Regularization Parameter C in {0.1, 1.0, 10.0, 30.0, 100.0}), Ablation 3 (Deterministic Arbitration Matrix Impact), Ablation 4 (Ablation of Action & Deadline Agents).", "Planned Ablation Studies:")
     
     # Section 5: Feasibility Note
     add_heading_1(doc, "5. Feasibility Note")
     add_body_p(doc, "5.1 Available Compute & Infrastructure: The design of AGENT AMAR specifically prioritizes lightweight, edge-compatible computational efficiency. The local machine learning component (TfidfVectorizer + LogisticRegression) executes entirely on standard commodity x86/ARM CPUs. The inference memory footprint is less than 120 MB of RAM, and disk storage for the persisted model artifact (email_classifier.joblib + metadata) is under 350 KB. Cloud LLM interactions are strictly restricted to ambiguous edge cases, functioning asynchronously through lightweight HTTPS REST API calls. Consequently, local GPU hardware is entirely unnecessary for training, inference, or real-time deployment.")
     add_body_p(doc, "5.2 Dataset Size, Access Status & Active Feedback Loop: The initial training corpus comprises over 134 hand-verified samples spanning all 15 categories, augmented by a 58-sample adversarial evaluation benchmark (backend/data/eval/email_eval_dataset.jsonl). Furthermore, AGENT AMAR incorporates an active learning loop: user re-classifications performed in the Flutter user interface are recorded in an encrypted SQLite feedback_corrections table. The automated retraining module (app.ml.retrain) automatically compiles these verified interactions into updated training sets, evaluating cross-validation accuracy before hot-reloading updated weights into memory without application downtime.")
-    add_body_p(doc, "5.3 Estimated Training and Inference Time: Fitting the sublinear TF-IDF vectorizer and solving the balanced Logistic Regression objective requires less than 0.85 seconds on a standard quad-core CPU. Local ML prediction latency is 2.5 ms – 4.0 ms per email; deterministic rule evaluation requires <1.0 ms; and escalated LLM inference (when triggered) requires 800 ms – 1,800 ms.")
+    add_body_p(doc, "5.3 Estimated Training and Inference Time: Fitting the sublinear TF-IDF vectorizer and solving the balanced Logistic Regression objective requires less than 0.85 seconds on a standard quad-core CPU. Local ML prediction latency is 2.5 ms - 4.0 ms per email; deterministic rule evaluation requires <1.0 ms; and escalated LLM inference (when triggered) requires 800 ms - 1,800 ms.")
     
     add_heading_2(doc, "5.4 Identified Technical Risks & Fallback Mitigation Plan")
     risk_headers = ["Risk Identifier", "Potential Failure Mode", "Fallback & Mitigation Strategy"]
@@ -469,35 +500,24 @@ def build_da1_report(output_path):
     t_risk = doc.add_table(rows=1, cols=len(risk_headers))
     style_table(t_risk, risk_widths, risk_headers, risk_data)
     
-    # Section 6: Contribution Matrix
-    add_heading_1(doc, "6. Project Contribution Matrix")
-    contrib_headers = ["Team Member / Contributor", "Module / Subsystem Responsibility", "Specific Technical Deliverables & Commits"]
-    contrib_widths = [1.6, 2.2, 2.7]
-    contrib_data = [
-        ["**S. MIRTTUL**\n(Roll No.: **24BRS1428**)", "**Multi-Agent Orchestration, Machine Learning Pipeline, & Evaluation Framework**", "• Designed & implemented deterministic AMAROrchestrator conflict resolution matrix and domain precedence rules.\n• Engineered cascaded TriageAgent (sublinear TF-IDF + calibrated Logistic Regression with C=30.0, confidence gating tau >= 0.70, and structured LLM fallback).\n• Implemented ActionAgent imperative verb parser and DeadlineAgent relative temporal resolution to ISO-8601 UTC timestamps.\n• Formulated mathematical equations, loss calibration, and developed offline benchmark evaluation suite (evaluate.py, training.py).\n• Conducted 15-class experimental ablation studies and wrote DA1 problem formalization and literature survey comparison."],
-        ["**ADITYA SRIKANTH**\n(Roll No.: **24BRS1437**)", "**Data Ingestion, Cryptographic Security, Priority Engine, & Client Delivery**", "• Engineered MailIntakeAgent for RFC 2822 MIME parsing, HTML tag stripping, Unicode NFKC normalization, and PII/credential redaction.\n• Developed GmailSyncService integrating Google OAuth 2.0 and incremental Gmail History API sync with stateful historyId baselining.\n• Designed transparent AES-256-GCM data-at-rest encryption layer and SHA-256 tamper-evident append-only audit ledger.\n• Implemented PriorityAgent context weighting, MonitorScheduler asynchronous cron loops, and multi-tier deadline escalation ladder (NORMAL -> REMINDER -> URGENT -> ALARM).\n• Built Firebase Cloud Messaging (FCM) background push service and developed cross-platform Flutter client UI application."]
-    ]
-    t_contrib = doc.add_table(rows=1, cols=len(contrib_headers))
-    style_table(t_contrib, contrib_widths, contrib_headers, contrib_data)
-    
-    # Section 7: References
-    add_heading_1(doc, "7. References")
+    # Section 6: References (Renumbered from 7, Contribution Matrix fully removed)
+    add_heading_1(doc, "6. References")
     refs = [
-        "1. S. Srivastava, G. Singh, S. Matsumoto, A. Raz, P. Costa, J. Poore, and Z. Yao, 'MailEx: Email Event and Argument Extraction,' in Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP), Singapore, Dec. 2023, pp. 6124–6139.",
-        "2. Q. Wu, G. Bansal, J. Zhang, Y. Wu, B. Li, E. Zhu, L. Jiang, X. Zhang, S. Zhang, J. Liu, A. H. Awadallah, R. W. White, D. Burger, and H. Wang, 'AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation,' in Advances in Neural Information Processing Systems (NeurIPS), vol. 36, New Orleans, LA, Dec. 2023, pp. 24876–24893.",
-        "3. L. Chen, M. Zaharia, and J. Zou, 'FrugalGPT: How to Use Large Language Models More Cheaply and More Accurately,' in Advances in Neural Information Processing Systems (NeurIPS), vol. 36, Dec. 2023, pp. 78321–78345.",
-        "4. C. Qian, X. Dang, C. Zhuang, Y. Wei, W. Chen, C. Lin, and M. Sun, 'Communicative Agents for Software Development,' in Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (ACL), Bangkok, Thailand, Aug. 2024, pp. 1287–1304.",
+        "1. S. Srivastava, G. Singh, S. Matsumoto, A. Raz, P. Costa, J. Poore, and Z. Yao, 'MailEx: Email Event and Argument Extraction,' in Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing (EMNLP), Singapore, Dec. 2023, pp. 6124-6139.",
+        "2. Q. Wu, G. Bansal, J. Zhang, Y. Wu, B. Li, E. Zhu, L. Jiang, X. Zhang, S. Zhang, J. Liu, A. H. Awadallah, R. W. White, D. Burger, and H. Wang, 'AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation,' in Advances in Neural Information Processing Systems (NeurIPS), vol. 36, New Orleans, LA, Dec. 2023, pp. 24876-24893.",
+        "3. L. Chen, M. Zaharia, and J. Zou, 'FrugalGPT: How to Use Large Language Models More Cheaply and More Accurately,' in Advances in Neural Information Processing Systems (NeurIPS), vol. 36, Dec. 2023, pp. 78321-78345.",
+        "4. C. Qian, X. Dang, C. Zhuang, Y. Wei, W. Chen, C. Lin, and M. Sun, 'Communicative Agents for Software Development,' in Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (ACL), Bangkok, Thailand, Aug. 2024, pp. 1287-1304.",
         "5. S. Kumar, P. Sharma, and R. K. Gupta, 'Context-Aware Intent Classification and Task Extraction from Enterprise Communications,' Elsevier Information Processing & Management, vol. 61, no. 3, p. 103642, May 2024.",
-        "6. A. S. Al-Ghamdi and M. A. Al-Hagery, 'A Robust Hybrid Deep Learning Model for Email Classification and Phishing Detection,' IEEE Access, vol. 11, pp. 84210–84224, Aug. 2023.",
-        "7. E. Laparra, D. Bethard, and S. Styler, 'Neural Temporal Relation Extraction and Normalization in Free-Form Text,' Transactions of the Association for Computational Linguistics (TACL), vol. 11, pp. 312–328, Apr. 2023.",
-        "8. Y. Zhang, H. Liu, and K. Chen, 'Dynamic Priority Assessment and Multi-Criteria Task Scheduling for Asynchronous Personal Messages,' Springer Neural Computing and Applications, vol. 36, no. 8, pp. 4125–4142, Feb. 2024.",
-        "9. X. Wang, T. He, and Z. Zhang, 'Hierarchical Multi-Label Attention Networks for Enterprise Email Triage and Action Item Identification,' IEEE Transactions on Computational Social Systems, vol. 11, no. 2, pp. 2145–2158, Apr. 2024.",
-        "10. J. Su, D. Zhou, and H. Zhao, 'Grounding Relative Temporal Expressions in Conversational Texts: A Neuro-Symbolic Approach,' in Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING), Turin, Italy, May 2024, pp. 4512–4523.",
-        "11. Z. Chen, Y. Shen, and M. Zaharia, 'Model Cascades with Calibrated Confidence Scores for Latency-Sensitive NLP Services,' in Proceedings of the 41st International Conference on Machine Learning (ICML), Vienna, Austria, Jul. 2024, pp. 7120–7139.",
-        "12. J. Park and S. Kim, 'Personalized Email Prioritization via User Interaction Graph and Content Modeling,' ACM Transactions on Information Systems (TOIS), vol. 42, no. 1, pp. 1–28, Jan. 2024.",
-        "13. M. Devlin and T. Liu, 'Automated Action Item Extraction from Professional Dialogues: A Comparative Study of LLMs versus Specialized Supervised Models,' Springer Knowledge and Information Systems, vol. 65, no. 11, pp. 4821–4845, Nov. 2023.",
-        "14. G. Mark, S. T. Iqbal, and M. Czerwinski, 'The Cost of Interrupted Work: An Empirical Analysis of Digital Communication Overload and Cognitive Fatigue,' in Proceedings of the 2022 ACM Conference on Human Factors in Computing Systems (CHI), New Orleans, LA, May 2022, pp. 1–16.",
-        "15. A. Radford and P. Narasimhan, 'Secure and Private Machine Learning for Edge-Cloud Collaborative Communication Systems,' IEEE Transactions on Big Data, vol. 10, no. 4, pp. 412–426, Aug. 2024.",
+        "6. A. S. Al-Ghamdi and M. A. Al-Hagery, 'A Robust Hybrid Deep Learning Model for Email Classification and Phishing Detection,' IEEE Access, vol. 11, pp. 84210-84224, Aug. 2023.",
+        "7. E. Laparra, D. Bethard, and S. Styler, 'Neural Temporal Relation Extraction and Normalization in Free-Form Text,' Transactions of the Association for Computational Linguistics (TACL), vol. 11, pp. 312-328, Apr. 2023.",
+        "8. Y. Zhang, H. Liu, and K. Chen, 'Dynamic Priority Assessment and Multi-Criteria Task Scheduling for Asynchronous Personal Messages,' Springer Neural Computing and Applications, vol. 36, no. 8, pp. 4125-4142, Feb. 2024.",
+        "9. X. Wang, T. He, and Z. Zhang, 'Hierarchical Multi-Label Attention Networks for Enterprise Email Triage and Action Item Identification,' IEEE Transactions on Computational Social Systems, vol. 11, no. 2, pp. 2145-2158, Apr. 2024.",
+        "10. J. Su, D. Zhou, and H. Zhao, 'Grounding Relative Temporal Expressions in Conversational Texts: A Neuro-Symbolic Approach,' in Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING), Turin, Italy, May 2024, pp. 4512-4523.",
+        "11. Z. Chen, Y. Shen, and M. Zaharia, 'Model Cascades with Calibrated Confidence Scores for Latency-Sensitive NLP Services,' in Proceedings of the 41st International Conference on Machine Learning (ICML), Vienna, Austria, Jul. 2024, pp. 7120-7139.",
+        "12. J. Park and S. Kim, 'Personalized Email Prioritization via User Interaction Graph and Content Modeling,' ACM Transactions on Information Systems (TOIS), vol. 42, no. 1, pp. 1-28, Jan. 2024.",
+        "13. M. Devlin and T. Liu, 'Automated Action Item Extraction from Professional Dialogues: A Comparative Study of LLMs versus Specialized Supervised Models,' Springer Knowledge and Information Systems, vol. 65, no. 11, pp. 4821-4845, Nov. 2023.",
+        "14. G. Mark, S. T. Iqbal, and M. Czerwinski, 'The Cost of Interrupted Work: An Empirical Analysis of Digital Communication Overload and Cognitive Fatigue,' in Proceedings of the 2022 ACM Conference on Human Factors in Computing Systems (CHI), New Orleans, LA, May 2022, pp. 1-16.",
+        "15. A. Radford and P. Narasimhan, 'Secure and Private Machine Learning for Edge-Cloud Collaborative Communication Systems,' IEEE Transactions on Big Data, vol. 10, no. 4, pp. 412-426, Aug. 2024.",
         "16. M. Alshammari and C. Simpson, 'Phishing and Social Engineering Email Detection in Academic Inboxes: A Multi-Stage Contextual Filtering Approach,' Elsevier Computers & Security, vol. 148, p. 104112, Jan. 2025."
     ]
     for ref_text in refs:
@@ -511,7 +531,7 @@ def build_da1_report(output_path):
         r_ref.font.color.rgb = COLOR_DARK
         
     doc.save(output_path)
-    print(f"Successfully generated: {output_path}")
+    print(f"Successfully generated clean DA1 report: {output_path}")
 
 if __name__ == "__main__":
     out_file = os.path.join("docs", "reviews", "DA1_REVIEW_1_REPORT.docx")
