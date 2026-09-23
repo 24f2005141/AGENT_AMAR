@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../config/api_config.dart';
 import '../dto/email_state_dto.dart';
+import '../dto/ai_mode_dto.dart';
 import '../dto/full_email_dto.dart';
 import '../dto/reply_dto.dart';
 import '../models/agent_analysis.dart';
@@ -56,6 +57,9 @@ class InboxController extends ChangeNotifier {
   String _llmStatus = 'unknown'; // online | offline | unconfigured | unknown
   String? _llmProvider;
   String? _llmModel;
+  AiModeDto? _aiMode;
+  bool _isAiModeUpdating = false;
+  String? _aiModeError;
 
   /// How often to silently reload persisted backend state while foregrounded.
   /// `null` disables the poll (resume-only refresh still runs). Never triggers a
@@ -71,22 +75,24 @@ class InboxController extends ChangeNotifier {
     bool enableCountdownTimer = true,
     Duration? autoRefreshInterval,
     bool autoRefreshOverride = false,
-  })  : _repository = repository ??
-            (ApiConfig.useMockData
-                ? MockEmailRepository()
-                : ApiEmailRepository()),
-        _notificationService = notificationService ?? NotificationService(),
-        _schedule = scheduleService ?? LocalScheduleService(),
-        _widgets = widgetService ?? HomeWidgetService(),
-        _autoRefreshInterval = autoRefreshOverride
-            ? autoRefreshInterval
-            : (autoRefreshInterval ?? ApiConfig.foregroundRefreshInterval) {
+  }) : _repository =
+           repository ??
+           (ApiConfig.useMockData
+               ? MockEmailRepository()
+               : ApiEmailRepository()),
+       _notificationService = notificationService ?? NotificationService(),
+       _schedule = scheduleService ?? LocalScheduleService(),
+       _widgets = widgetService ?? HomeWidgetService(),
+       _autoRefreshInterval = autoRefreshOverride
+           ? autoRefreshInterval
+           : (autoRefreshInterval ?? ApiConfig.foregroundRefreshInterval) {
     // ONE hook for home-screen widgets: every state change this controller
     // publishes flows through here, so no UI widget or repository ever calls
     // the widget platform itself. Cheap by construction — see
     // [_publishWidgets].
     addListener(_publishWidgets);
     refreshSystemStatus();
+    refreshAiMode();
     checkGmailStatus();
     loadData();
     if (enableCountdownTimer) {
@@ -111,10 +117,15 @@ class InboxController extends ChangeNotifier {
   /// Start the lightweight foreground poll of persisted backend state.
   /// Idempotent; no-op when the interval is disabled. Call on app resume.
   void startAutoRefresh() {
-    if (_disposed || _autoRefreshInterval == null || _autoRefreshTimer != null) {
+    if (_disposed ||
+        _autoRefreshInterval == null ||
+        _autoRefreshTimer != null) {
       return;
     }
-    _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) => autoRefresh());
+    _autoRefreshTimer = Timer.periodic(
+      _autoRefreshInterval,
+      (_) => autoRefresh(),
+    );
   }
 
   /// Stop the foreground poll (call when the app is backgrounded).
@@ -134,7 +145,8 @@ class InboxController extends ChangeNotifier {
       final emails = await _repository.getEmails(active: true);
       final notifications = await _repository.getNotifications();
 
-      final changed = !_sameEmails(emails, _emails) ||
+      final changed =
+          !_sameEmails(emails, _emails) ||
           notifications.length != _notifications.length;
 
       _emails = emails;
@@ -142,8 +154,9 @@ class InboxController extends ChangeNotifier {
       await _notificationService.syncBackendNotifications(_notifications);
       _reconcileDeadlineSchedule();
 
-      final alarmEvent =
-          _notifications.where((n) => n.requiresAlarm && !n.isDismissed).firstOrNull;
+      final alarmEvent = _notifications
+          .where((n) => n.requiresAlarm && !n.isDismissed)
+          .firstOrNull;
       if (alarmEvent != null && _activeAlarm == null) {
         _activeAlarm = alarmEvent;
       }
@@ -237,7 +250,9 @@ class InboxController extends ChangeNotifier {
       ]);
     } catch (e) {
       // Scheduling is best-effort and must never break the inbox.
-      debugPrint('[InboxController] Deadline schedule reconciliation failed: $e');
+      debugPrint(
+        '[InboxController] Deadline schedule reconciliation failed: $e',
+      );
     }
   }
 
@@ -278,6 +293,10 @@ class InboxController extends ChangeNotifier {
   String get llmStatus => _backendOnline ? _llmStatus : 'unknown';
   String? get llmProvider => _llmProvider;
   String? get llmModel => _llmModel;
+  AiModeDto? get aiMode => _aiMode;
+  bool get isAiModeUpdating => _isAiModeUpdating;
+  String? get aiModeError => _aiModeError;
+
   /// True once the backend has a Gmail monitoring baseline (see Phase 12).
   bool get gmailMonitoringActive => _isGmailConnected && _gmailMonitoringActive;
   DateTime? get lastGmailSyncAt => _lastGmailSyncAt;
@@ -301,9 +320,11 @@ class InboxController extends ChangeNotifier {
     // (a Reply Required email also has an action, but its primary bucket is
     // REPLY_REQUIRED — it must not show here too).
     return _emails
-        .where((e) =>
-            e.primaryCategory == PrimaryCategory.actionRequired &&
-            !e.userState.isCompleted)
+        .where(
+          (e) =>
+              e.primaryCategory == PrimaryCategory.actionRequired &&
+              !e.userState.isCompleted,
+        )
         .toList()
       ..sort((a, b) {
         if (a.isCritical && !b.isCritical) return -1;
@@ -352,6 +373,35 @@ class InboxController extends ChangeNotifier {
       _backendOnline = false;
       _llmStatus = 'unknown';
     } finally {
+      _notify();
+    }
+  }
+
+  Future<void> refreshAiMode() async {
+    try {
+      _aiMode = await _repository.getAiMode();
+      _aiModeError = null;
+    } catch (e) {
+      _aiModeError = e is ApiException ? e.message : 'Could not load AI mode';
+    } finally {
+      _notify();
+    }
+  }
+
+  Future<bool> selectAiMode(String mode) async {
+    if (_isAiModeUpdating || mode == _aiMode?.selected) return true;
+    _isAiModeUpdating = true;
+    _aiModeError = null;
+    _notify();
+    try {
+      _aiMode = await _repository.setAiMode(mode);
+      await refreshSystemStatus();
+      return true;
+    } catch (e) {
+      _aiModeError = e is ApiException ? e.message : 'Could not change AI mode';
+      return false;
+    } finally {
+      _isAiModeUpdating = false;
       _notify();
     }
   }
@@ -423,7 +473,9 @@ class InboxController extends ChangeNotifier {
       _reconcileDeadlineSchedule();
 
       // Check if there are any active alarms
-      final alarmEvent = _notifications.where((n) => n.requiresAlarm && !n.isDismissed).firstOrNull;
+      final alarmEvent = _notifications
+          .where((n) => n.requiresAlarm && !n.isDismissed)
+          .firstOrNull;
       if (alarmEvent != null && _activeAlarm == null) {
         _activeAlarm = alarmEvent;
       }
@@ -532,9 +584,11 @@ class InboxController extends ChangeNotifier {
     switch (_currentFilter) {
       case 'action_required':
         return _emails
-            .where((e) =>
-                e.primaryCategory == PrimaryCategory.actionRequired &&
-                !e.userState.isCompleted)
+            .where(
+              (e) =>
+                  e.primaryCategory == PrimaryCategory.actionRequired &&
+                  !e.userState.isCompleted,
+            )
             .toList();
       case 'reply_needed':
         return _emails
@@ -569,9 +623,13 @@ class InboxController extends ChangeNotifier {
   /// local list immediately so the email moves out of its old section — every
   /// section filters on `primaryCategory`. Errors propagate to the caller.
   Future<Email> submitClassificationFeedback(
-      String emailId, PrimaryCategory category) async {
-    final updated =
-        await _repository.submitClassificationFeedback(emailId, category);
+    String emailId,
+    PrimaryCategory category,
+  ) async {
+    final updated = await _repository.submitClassificationFeedback(
+      emailId,
+      category,
+    );
     final index = _emails.indexWhere((e) => e.id == emailId);
     if (index != -1) {
       _emails[index] = updated;
@@ -652,8 +710,9 @@ class InboxController extends ChangeNotifier {
       } else if (updated.isActive) {
         // un-snoozing brings it back onto the feed
         _emails = [..._emails, updated];
-        _resolvedEmails =
-            _resolvedEmails.where((e) => e.id != emailId).toList();
+        _resolvedEmails = _resolvedEmails
+            .where((e) => e.id != emailId)
+            .toList();
         notifyListeners();
       }
     } catch (e) {
@@ -685,7 +744,9 @@ class InboxController extends ChangeNotifier {
       notifyListeners();
       return updated;
     } on ApiException catch (e) {
-      if (!e.isAuthExpired) _errorMessage = 'Could not mark this as done: ${e.message}';
+      if (!e.isAuthExpired) {
+        _errorMessage = 'Could not mark this as done: ${e.message}';
+      }
       notifyListeners();
       return null;
     } catch (e) {
@@ -704,7 +765,9 @@ class InboxController extends ChangeNotifier {
         _emails = [..._emails, updated];
       }
       notifyListeners();
-    } catch (_) {/* non-critical */}
+    } catch (_) {
+      /* non-critical */
+    }
   }
 
   /// "Clear Resolved" — acknowledge every active non-actionable email on the
@@ -726,7 +789,10 @@ class InboxController extends ChangeNotifier {
     }
   }
 
-  Future<void> completeAction(String emailId, [String actionRef = 'act_001']) async {
+  Future<void> completeAction(
+    String emailId, [
+    String actionRef = 'act_001',
+  ]) async {
     try {
       final updated = await _repository.completeAction(emailId, actionRef);
       // Action done → no future deadline alarm for it (Part 7: no ghost alarms).
@@ -744,7 +810,10 @@ class InboxController extends ChangeNotifier {
     }
   }
 
-  Future<void> dismissAction(String emailId, [String actionRef = 'act_001']) async {
+  Future<void> dismissAction(
+    String emailId, [
+    String actionRef = 'act_001',
+  ]) async {
     try {
       final updated = await _repository.dismissAction(emailId, actionRef);
       await _schedule.cancelForEmail(emailId);
@@ -769,13 +838,19 @@ class InboxController extends ChangeNotifier {
   Future<void> triggerMonitorCheck() async {
     try {
       final result = await _repository.runDeadlineCheck();
-      final alarmDecision = result.results.where((r) => r.requiresAlarm).firstOrNull;
+      final alarmDecision = result.results
+          .where((r) => r.requiresAlarm)
+          .firstOrNull;
 
       await loadData();
 
       if (alarmDecision != null) {
         final matchingNotification = _notifications
-            .where((n) => n.id == alarmDecision.notificationId.toString() || n.requiresAlarm)
+            .where(
+              (n) =>
+                  n.id == alarmDecision.notificationId.toString() ||
+                  n.requiresAlarm,
+            )
             .firstOrNull;
 
         if (matchingNotification != null) {
@@ -783,7 +858,9 @@ class InboxController extends ChangeNotifier {
           notifyListeners();
         } else {
           _activeAlarm = NotificationEvent(
-            id: alarmDecision.notificationId?.toString() ?? 'alarm_${DateTime.now().millisecondsSinceEpoch}',
+            id:
+                alarmDecision.notificationId?.toString() ??
+                'alarm_${DateTime.now().millisecondsSinceEpoch}',
             emailId: alarmDecision.emailId,
             emailSubject: 'Imminent Deadline Alarm',
             notificationType: 'deadline_escalation',

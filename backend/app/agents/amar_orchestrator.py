@@ -13,7 +13,8 @@ It **coordinates**; it does not re-do the agents' work:
   * keeps a structured ``agent_trace``
   * computes the final ``needs_human_review`` with explicit reasons
 
-No LLM here. No notification sending, no monitoring, no Gmail writes, no DB.
+The orchestrator may request one shared typed Jev/Laya decision bundle, but it does
+not generate text. No notification sending, monitoring, Gmail writes, or DB.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from time import perf_counter
 from zoneinfo import ZoneInfo
 
 from app.agents.action_agent import ActionAgent
@@ -28,6 +30,7 @@ from app.agents.deadline_agent import DeadlineAgent
 from app.agents.priority_agent import PriorityAgent
 from app.agents.triage_agent import TriageAgent
 from app.core.config import Settings, get_settings
+from app.core.logging_setup import secure_logger
 from app.models.agent_output import AgentError, AgentOutput, AgentStatus
 from app.models.decision import (
     ConflictResolution,
@@ -43,11 +46,22 @@ from app.models.email import NormalizedEmail
 from app.models.priority import PriorityLevel, ProximityBucket
 from app.ml.email_classifier import get_email_ml_classifier
 from app.services.llm_service import build_llm_client
+from app.services.decision_service import (
+    DecisionClient,
+    JevDecisionBundle,
+    NullDecisionClient,
+    get_shared_decision_client,
+    decision_context,
+    decision_needed,
+)
 from app.services.priority_context import get_priority_context
+from app.services.ai_mode_service import effective_ai_settings
 from app.utils import priority_scoring as ps
 
 AGENT_NAME = "AMAR Orchestrator"
 AGENT_VERSION = "0.1.0"
+
+logger = secure_logger(__name__)
 
 _LOW_BAND = {"PROMOTIONAL", "NEWSLETTER", "SPAM", "SOCIAL"}
 _NEAR_BUCKETS = {"OVERDUE", "WITHIN_1H", "WITHIN_24H"}
@@ -104,12 +118,14 @@ class AMAROrchestrator:
         priority: PriorityAgent,
         *,
         settings: Settings | None = None,
+        decision_client: DecisionClient | None = None,
     ) -> None:
         self.triage = triage
         self.action = action
         self.deadline = deadline
         self.priority = priority
         self.settings = settings or get_settings()
+        self.decision_client = decision_client or NullDecisionClient()
         self._tz = self._resolve_tz(self.settings.default_timezone)
 
     # -- public API -----------------------------------------------------
@@ -126,8 +142,21 @@ class AMAROrchestrator:
         errors: list[AgentError] = []
         trace: list[TraceEntry] = [self._intake_trace(intake_output)]
 
+        # A local-only preview costs only a few milliseconds and lets all four
+        # agents share one typed decision request/forward pass. If the decision
+        # layer is disabled, this preview is skipped and the historical pipeline
+        # is unchanged.
+        decision, decision_trace = self._shared_decision(email, now=now)
+        if decision_trace is not None:
+            trace.append(decision_trace)
+
         # --- Triage ---
-        tri = self._run(lambda: self.triage.classify(email), "Triage Agent", email, errors)
+        tri = self._run(
+            lambda: self.triage.classify(email, decision=decision),
+            "Triage Agent",
+            email,
+            errors,
+        )
         trace.append(tri.trace)
         category = self._get(tri.output, "category", "OTHER")
         further = bool(self._get(tri.output, "further_analysis_required", True))
@@ -136,10 +165,15 @@ class AMAROrchestrator:
         # --- Action + Deadline (gated) ---
         if deep:
             act = self._run(
-                lambda: self.action.detect(email, tri.output), "Action Agent", email, errors
+                lambda: self.action.detect(email, tri.output, decision=decision),
+                "Action Agent",
+                email,
+                errors,
             )
             ddl = self._run(
-                lambda: self.deadline.analyze(email, tri.output, act.output),
+                lambda: self.deadline.analyze(
+                    email, tri.output, act.output, decision=decision
+                ),
                 "Deadline Agent", email, errors,
             )
         else:
@@ -150,7 +184,14 @@ class AMAROrchestrator:
 
         # --- Priority (always) ---
         pri = self._run(
-            lambda: self.priority.score(email, tri.output, act.output, ddl.output, now=now),
+            lambda: self.priority.score(
+                email,
+                tri.output,
+                act.output,
+                ddl.output,
+                now=now,
+                decision=decision,
+            ),
             "Priority Agent", email, errors,
         )
         if pri.output.status == "error":
@@ -186,6 +227,88 @@ class AMAROrchestrator:
             started_at=started_at,
             finished_at=self._now(),
         )
+
+    def _shared_decision(
+        self,
+        email: NormalizedEmail,
+        *,
+        now: datetime | None,
+    ) -> tuple[JevDecisionBundle | None, TraceEntry | None]:
+        if not self.decision_client.is_available:
+            return None, None
+
+        started = perf_counter()
+        provider = self.decision_client.provider
+        layer_name = f"{provider.title()} Decision Layer"
+        try:
+            tri = self.triage.classify(
+                email, allow_remote=False, record_metrics=False
+            )
+            category = self._get(tri, "category", "OTHER")
+            further = bool(self._get(tri, "further_analysis_required", True))
+            deep = further or category not in _LOW_BAND or tri.status == "error"
+            if deep:
+                act = self.action.detect(email, tri, allow_remote=False)
+                ddl = self.deadline.analyze(
+                    email, tri, act, allow_remote=False
+                )
+            else:
+                act = self._skipped(
+                    "Action Agent", email, self._empty_action()
+                ).output
+                ddl = self._skipped(
+                    "Deadline Agent", email, self._empty_deadline()
+                ).output
+            pri = self.priority.score(
+                email, tri, act, ddl, now=now, allow_remote=False
+            )
+            routing = decision_context(tri, act, ddl, pri)
+            if not decision_needed(routing):
+                return None, TraceEntry(
+                    agent=layer_name,
+                    status="skipped",
+                    confidence=1.0,
+                    method="local_confident",
+                    duration_ms=max(0, int((perf_counter() - started) * 1000)),
+                )
+
+            bundle = self.decision_client.evaluate(
+                email,
+                triage=tri,
+                action=act,
+                deadline=ddl,
+                priority=pri,
+            )
+            confidences = [
+                value
+                for value in (
+                    bundle.category.confidence if bundle.category else None,
+                    bundle.importance.confidence if bundle.importance else None,
+                    bundle.priority_adjustment.confidence
+                    if bundle.priority_adjustment
+                    else None,
+                )
+                if value is not None
+            ]
+            confidence = sum(confidences) / len(confidences) if confidences else 0.0
+            return bundle, TraceEntry(
+                agent=layer_name,
+                status="ok",
+                confidence=round(confidence, 4),
+                method=f"{provider}_cache" if bundle.cache_hit else provider,
+                duration_ms=max(0, int((perf_counter() - started) * 1000)),
+            )
+        except Exception as exc:  # optimization; normal fallbacks remain authoritative
+            logger.warning("Shared %s decision unavailable: %s", provider, type(exc).__name__)
+            return None, TraceEntry(
+                agent=layer_name,
+                status="partial",
+                confidence=0.0,
+                method=f"{provider}_unavailable",
+                fallback_used=True,
+                duration_ms=max(0, int((perf_counter() - started) * 1000)),
+                error_codes=[f"{provider}_unavailable"],
+            )
 
     # -- decision assembly ----------------------------------------
 
@@ -461,8 +584,8 @@ class AMAROrchestrator:
         if isinstance(sig, dict):
             method = sig.get("classification_method")
         method = method or data.get("detection_method") or data.get("scoring_method")
-        if method is not None and not isinstance(method, str):
-            method = getattr(method, "value", str(method))
+        if method is not None:
+            method = getattr(method, "value", method)
         dur = None
         if out.started_at and out.finished_at:
             dur = max(0, int((out.finished_at - out.started_at).total_seconds() * 1000))
@@ -599,7 +722,7 @@ def build_default_orchestrator(settings: Settings | None = None) -> AMAROrchestr
     Mirrors ``app.api.deps.get_amar_orchestrator`` — same agents, same LLM
     client, same priority context — for background jobs (scheduler, Gmail sync).
     """
-    settings = settings or get_settings()
+    settings = effective_ai_settings(settings or get_settings())
     llm = build_llm_client(settings)
     context = get_priority_context()
     ml_classifier = get_email_ml_classifier(settings)
@@ -609,6 +732,7 @@ def build_default_orchestrator(settings: Settings | None = None) -> AMAROrchestr
         DeadlineAgent(settings=settings, llm_client=llm),
         PriorityAgent(settings=settings, llm_client=llm, context=context),
         settings=settings,
+        decision_client=get_shared_decision_client(settings),
     )
 
 

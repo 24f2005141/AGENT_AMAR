@@ -161,12 +161,12 @@ def test_mark_viewed_and_reminder_create_are_audited(db):
 
 def test_llm_abstraction_unchanged():
     from app.services.llm_service import (
-        AnthropicLLMClient, GeminiLLMClient, NullLLMClient, OllamaLLMClient,
-        OpenAILLMClient, build_llm_client,
+        AnthropicLLMClient, GeminiLLMClient, GroqLLMClient, NullLLMClient,
+        OllamaLLMClient, OpenAILLMClient, build_llm_client,
     )
     assert isinstance(build_llm_client(Settings(llm_provider="none")), NullLLMClient)
     assert build_llm_client(Settings(llm_provider="ollama", llm_model="x")).provider == "ollama"
-    for cls in (AnthropicLLMClient, GeminiLLMClient, OpenAILLMClient):
+    for cls in (AnthropicLLMClient, GeminiLLMClient, GroqLLMClient, OpenAILLMClient):
         assert cls  # still importable, signatures untouched
 
 

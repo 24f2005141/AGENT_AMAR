@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-22T18:31:48.884369+00:00",
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.15"
+  },
+  "dataset": "backend/data/eval/email_eval_dataset.jsonl",
+  "live_jev": {
+    "configured": false,
+    "model": "jev-latest",
+    "attempts": 0,
+    "reason": "TYPESAFE_API_KEY is empty"
+  },
+  "routing_census": {
+    "messages": 58,
+    "pre": {
+      "generative_calls": 83,
+      "calls_by_task": {
+        "deadline": 10,
+        "triage": 36,
+        "action": 27,
+        "priority": 10
+      },
+      "prompt_chars": 152675,
+      "prompt_chars_by_task": {
+        "deadline": 18702,
+        "triage": 71764,
+        "action": 51882,
+        "priority": 10327
+      },
+      "max_sequential_calls_per_email": 4,
+      "zero_remote_call_messages": 10,
+      "routing_harness_category_matches": 55
+    },
+    "post": {
+      "jev_calls": 48,
+      "generative_fallback_calls": 7,
+      "fallback_calls_by_task": {
+        "deadline": 7
+      },
+      "total_remote_decision_calls": 55,
+      "max_sequential_calls_per_email": 2,
+      "zero_remote_call_messages": 10,
+      "question_count": {
+        "count": 48,
+        "mean": 13.25,
+        "p50": 13.0,
+        "p95": 14.0,
+        "min": 13.0,
+        "max": 15.0
+      },
+      "state_chars": {
+        "count": 48,
+        "mean": 780.8541666666666,
+        "p50": 753.5,
+        "p95": 1026.25,
+        "min": 616.0,
+        "max": 1063.0
+      },
+      "request_chars": {
+        "count": 48,
+        "mean": 4655.041666666667,
+        "p50": 4555.5,
+        "p95": 5148.05,
+        "min": 4418.0,
+        "max": 5399.0
+      },
+      "request_chars_total": 223442,
+      "routing_harness_category_matches": 55
+    },
+    "change": {
+      "generative_calls_avoided": 76,
+      "generative_call_reduction_percent": 91.56626506024097,
+      "total_remote_call_reduction_percent": 33.734939759036145,
+      "serialized_chars_change_percent": 46.351400032749304
+    }
+  },
+  "local_latency": {
+    "iterations_per_message": 20,
+    "samples_per_mode": 1160,
+    "pre_local_harness_ms": {
+      "count": 1160,
+      "mean": 1.5589876727156886,
+      "p50": 1.4077500090934336,
+      "p95": 2.847555000334978,
+      "min": 0.6533999985549599,
+      "max": 9.395500004757196
+    },
+    "post_local_harness_ms": {
+      "count": 1160,
+      "mean": 3.3011306892901837,
+      "p50": 3.08249999943655,
+      "p95": 5.606689996784553,
+      "min": 1.1465000279713422,
+      "max": 9.6614999929443
+    },
+    "scope": "CPU/Python orchestration only. Offline provider responses have zero network and inference time; these values are not live Jev latency."
+  },
+  "verification": {
+    "backend_tests_passed": 822
+  },
+  "privacy": {
+    "synthetic_data_only": true,
+    "raw_messages_recorded": false,
+    "credentials_recorded": false
+  }
+}

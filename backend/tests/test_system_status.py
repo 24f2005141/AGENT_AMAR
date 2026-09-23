@@ -84,7 +84,7 @@ def test_ollama_offline_on_http_error():
     assert "HTTP 500" in (s.detail or "")
 
 
-@pytest.mark.parametrize("provider", ["openai", "anthropic", "gemini"])
+@pytest.mark.parametrize("provider", ["openai", "anthropic", "gemini", "groq"])
 def test_api_provider_online_when_key_present(provider):
     s = check_llm(Settings(llm_provider=provider, llm_api_key="sk-test-do-not-log"))
     assert s.status == "online"
@@ -93,7 +93,7 @@ def test_api_provider_online_when_key_present(provider):
     assert "sk-test-do-not-log" not in (s.detail or "")
 
 
-@pytest.mark.parametrize("provider", ["openai", "anthropic", "gemini"])
+@pytest.mark.parametrize("provider", ["openai", "anthropic", "gemini", "groq"])
 def test_api_provider_unconfigured_without_key(provider):
     s = check_llm(Settings(llm_provider=provider, llm_api_key=""))
     assert s.status == "unconfigured"
@@ -122,6 +122,33 @@ def test_check_llm_does_not_run_inference(monkeypatch):
     check_llm(Settings(llm_provider="openai", llm_api_key="sk-x"))
     check_llm(Settings(llm_provider="none"))
     assert called["n"] == 0
+
+
+def test_gemini_primary_groq_fallback_status():
+    s = check_llm(
+        Settings(
+            llm_provider="gemini",
+            llm_api_key="gemini-key",
+            llm_fallback_provider="groq",
+            llm_fallback_api_key="groq-key",
+        )
+    )
+    assert s.status == "online"
+    assert s.provider == "gemini->groq"
+    assert s.model == "gemini-3.5-flash-lite->openai/gpt-oss-20b"
+    assert s.detail == "primary online; fallback online"
+
+
+def test_status_is_online_when_only_fallback_is_configured():
+    s = check_llm(
+        Settings(
+            llm_provider="gemini",
+            llm_fallback_provider="groq",
+            llm_fallback_api_key="groq-key",
+        )
+    )
+    assert s.status == "online"
+    assert s.detail == "primary unconfigured; fallback online"
 
 
 # --- endpoint --------------------------------------------------------

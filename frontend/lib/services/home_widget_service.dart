@@ -53,7 +53,8 @@ class FakeHomeWidgetPort implements HomeWidgetPort {
   Future<void> saveData(String key, String value) async => data[key] = value;
 
   @override
-  Future<void> updateWidget(String androidName) async => updated.add(androidName);
+  Future<void> updateWidget(String androidName) async =>
+      updated.add(androidName);
 }
 
 /// THE single place home-screen widgets are refreshed from.
@@ -73,11 +74,14 @@ class FakeHomeWidgetPort implements HomeWidgetPort {
 class HomeWidgetService {
   static HomeWidgetService? _appInstance;
 
-  /// Names must match the Kotlin AppWidgetProvider class names.
-  static const String focusWidget = 'FocusNowWidgetProvider';
-  static const String dashboardWidget = 'AttentionDashboardWidgetProvider';
-  static const String deadlineWidget = 'DeadlineCountdownWidgetProvider';
-  static const String quickActionsWidget = 'QuickActionsWidgetProvider';
+  /// Android plugin prefixes these names with the application package. The
+  /// providers live in its `widgets` subpackage, not at the package root.
+  static const String focusWidget = 'widgets.FocusNowWidgetProvider';
+  static const String dashboardWidget =
+      'widgets.AttentionDashboardWidgetProvider';
+  static const String deadlineWidget =
+      'widgets.DeadlineCountdownWidgetProvider';
+  static const String quickActionsWidget = 'widgets.QuickActionsWidgetProvider';
 
   static const String snapshotKey = 'sorted_widget_snapshot';
   static const String _pendingDoneKey = 'sorted_widget_pending_done';
@@ -86,7 +90,8 @@ class HomeWidgetService {
       _appInstance ??= HomeWidgetService._(const HomeWidgetPlatform());
 
   @visibleForTesting
-  factory HomeWidgetService.forTest(HomeWidgetPort port) => HomeWidgetService._(port);
+  factory HomeWidgetService.forTest(HomeWidgetPort port) =>
+      HomeWidgetService._(port);
 
   HomeWidgetService._(this._port);
 

@@ -89,7 +89,14 @@ class AuthSessionService:
 
     def resolve(self, raw_token: str | None) -> User | None:
         """Return the live user for a bearer token, or ``None`` if the token is
-        unknown / revoked / expired. Bumps ``last_used_at``."""
+        unknown / revoked / expired.
+
+        Authentication is deliberately read-only. Updating ``last_used_at`` on
+        every protected request made a harmless mode switch compete with the
+        long-running Gmail sync transaction for SQLite's single writer lock.
+        The dependency session is not committed after authentication anyway,
+        so that flush created contention without persisting useful data.
+        """
         if not raw_token:
             return None
         row = self.session.execute(
@@ -99,8 +106,6 @@ class AuthSessionService:
             return None
         if _aware(row.expires_at) is not None and _aware(row.expires_at) <= utcnow():
             return None
-        row.last_used_at = utcnow()
-        self.session.flush()
         return self.session.get(User, row.user_pk)
 
     def revoke(self, raw_token: str | None) -> bool:

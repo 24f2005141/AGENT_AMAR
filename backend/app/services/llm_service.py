@@ -12,7 +12,8 @@ Rules honoured here:
     application never crashes because an LLM is missing / a server is down.
 
 Supported providers (``LLM_PROVIDER``): ``none`` · ``openai`` · ``anthropic`` ·
-``gemini`` · ``ollama``.
+``gemini`` · ``groq`` · ``ollama``. ``LLM_FALLBACK_PROVIDER`` optionally wraps
+the primary with automatic failover.
 """
 
 from __future__ import annotations
@@ -177,7 +178,7 @@ class GeminiLLMClient(LLMClient):
 
     def __init__(self, api_key: str, model: str, timeout: float = 20.0) -> None:
         self._api_key = api_key
-        self.model = model or "gemini-2.5-flash"
+        self.model = model or "gemini-3.5-flash-lite"
         self._timeout = timeout
 
     @property
@@ -215,6 +216,91 @@ class GeminiLLMClient(LLMClient):
             raise LLMUnavailableError(f"Gemini request failed: {type(exc).__name__}") from exc
 
         return _extract_json_object(text)
+
+
+class GroqLLMClient(LLMClient):
+    """Groq Chat Completions through its OpenAI-compatible endpoint."""
+
+    provider = "groq"
+    _BASE_URL = "https://api.groq.com/openai/v1"
+
+    def __init__(self, api_key: str, model: str, timeout: float = 20.0) -> None:
+        self._api_key = api_key
+        self.model = model or "openai/gpt-oss-20b"
+        self._timeout = timeout
+
+    @property
+    def is_available(self) -> bool:
+        return bool(self._api_key)
+
+    def complete_json(self, system: str, user: str, *, max_tokens: int = 512) -> dict[str, Any]:
+        if not self._api_key:
+            raise LLMUnavailableError("GROQ api key not configured.")
+        try:
+            from openai import OpenAI
+        except ImportError as exc:  # pragma: no cover
+            raise LLMUnavailableError("`openai` package is not installed.") from exc
+
+        try:
+            client = OpenAI(
+                api_key=self._api_key,
+                base_url=self._BASE_URL,
+                timeout=self._timeout,
+            )
+            completion = client.chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            )
+            content = completion.choices[0].message.content or ""
+        except Exception as exc:  # network / auth / rate limit / quota
+            raise LLMUnavailableError(f"Groq request failed: {type(exc).__name__}") from exc
+
+        return _extract_json_object(content)
+
+
+class FallbackLLMClient(LLMClient):
+    """Try a primary client, then a secondary client on any typed LLM failure."""
+
+    def __init__(self, primary: LLMClient, fallback: LLMClient) -> None:
+        self.primary = primary
+        self.fallback = fallback
+        self.provider = f"{primary.provider}->{fallback.provider}"
+        self.model = f"{primary.model}->{fallback.model}"
+
+    @property
+    def is_available(self) -> bool:
+        return self.primary.is_available or self.fallback.is_available
+
+    def complete_json(self, system: str, user: str, *, max_tokens: int = 512) -> dict[str, Any]:
+        primary_failed = False
+        if self.primary.is_available:
+            try:
+                return self.primary.complete_json(system, user, max_tokens=max_tokens)
+            except LLMError:
+                primary_failed = True
+        else:
+            primary_failed = True
+
+        if self.fallback.is_available:
+            try:
+                return self.fallback.complete_json(system, user, max_tokens=max_tokens)
+            except LLMError as exc:
+                raise LLMUnavailableError(
+                    f"Primary provider '{self.primary.provider}' and fallback "
+                    f"provider '{self.fallback.provider}' both failed."
+                ) from exc
+
+        if primary_failed:
+            raise LLMUnavailableError(
+                f"Primary provider '{self.primary.provider}' failed and fallback "
+                f"provider '{self.fallback.provider}' is not configured."
+            )
+        raise LLMUnavailableError("No LLM provider is available.")  # pragma: no cover
 
 
 class OllamaLLMClient(LLMClient):
@@ -279,29 +365,53 @@ class OllamaLLMClient(LLMClient):
         return _extract_json_object(text)
 
 
+def _build_provider_client(
+    provider: str,
+    api_key: str,
+    model: str,
+    request_timeout: float,
+    *,
+    ollama_base_url: str,
+) -> LLMClient:
+    """Build one provider client without applying fallback composition."""
+    provider = (provider or "none").strip().lower()
+    if provider == "anthropic":
+        return AnthropicLLMClient(api_key, model, request_timeout)
+    if provider == "openai":
+        return OpenAILLMClient(api_key, model, request_timeout)
+    if provider == "gemini":
+        return GeminiLLMClient(api_key, model, request_timeout)
+    if provider == "groq":
+        return GroqLLMClient(api_key, model, request_timeout)
+    if provider == "ollama":
+        return OllamaLLMClient(model, ollama_base_url, request_timeout)
+    return NullLLMClient()
+
+
 def build_llm_client(settings: Settings, *, timeout: float | None = None) -> LLMClient:
-    """Factory: pick a provider from settings. Unknown / unset -> NullLLMClient.
+    """Build the configured primary client and optional automatic fallback.
 
     ``timeout`` overrides ``settings.llm_timeout_seconds`` for this client only
     (e.g. reply drafting needs longer than a small classification call). The
     provider selection is unchanged — no provider-specific code leaks to callers.
     """
-    provider = (settings.llm_provider or "none").strip().lower()
     request_timeout = timeout if timeout and timeout > 0 else settings.llm_timeout_seconds
-    if provider == "anthropic":
-        return AnthropicLLMClient(
-            settings.llm_api_key, settings.llm_model, request_timeout
-        )
-    if provider == "openai":
-        return OpenAILLMClient(
-            settings.llm_api_key, settings.llm_model, request_timeout
-        )
-    if provider == "gemini":
-        return GeminiLLMClient(
-            settings.llm_api_key, settings.llm_model, request_timeout
-        )
-    if provider == "ollama":
-        return OllamaLLMClient(
-            settings.llm_model, settings.ollama_base_url, request_timeout
-        )
-    return NullLLMClient()
+    primary = _build_provider_client(
+        settings.llm_provider,
+        settings.llm_api_key,
+        settings.llm_model,
+        request_timeout,
+        ollama_base_url=settings.ollama_base_url,
+    )
+    fallback = _build_provider_client(
+        settings.llm_fallback_provider,
+        settings.llm_fallback_api_key,
+        settings.llm_fallback_model,
+        request_timeout,
+        ollama_base_url=settings.ollama_base_url,
+    )
+    if isinstance(fallback, NullLLMClient):
+        return primary
+    if isinstance(primary, NullLLMClient):
+        return fallback
+    return FallbackLLMClient(primary, fallback)

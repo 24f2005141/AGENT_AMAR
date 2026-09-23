@@ -30,8 +30,8 @@ OFFLINE = "offline"
 UNCONFIGURED = "unconfigured"
 UNKNOWN = "unknown"
 
-KNOWN_PROVIDERS = frozenset({"none", "ollama", "gemini", "openai", "anthropic"})
-_API_KEY_PROVIDERS = frozenset({"gemini", "openai", "anthropic"})
+KNOWN_PROVIDERS = frozenset({"none", "ollama", "gemini", "groq", "openai", "anthropic"})
+_API_KEY_PROVIDERS = frozenset({"gemini", "groq", "openai", "anthropic"})
 
 #: Ollama's model-list probe must be fast — a status bar, not a health gate.
 _OLLAMA_PROBE_TIMEOUT_SECONDS = 3.0
@@ -86,6 +86,43 @@ def check_llm(settings: Settings, *, http_get=None) -> LlmStatus:
     Returns one of ``online`` / ``offline`` / ``unconfigured`` / ``unknown``.
     """
     provider = (settings.llm_provider or "none").strip().lower()
+    fallback_provider = (settings.llm_fallback_provider or "none").strip().lower()
+
+    if fallback_provider != "none":
+        primary_settings = settings.model_copy(
+            update={
+                "llm_fallback_provider": "none",
+                "llm_fallback_model": "",
+                "llm_fallback_api_key": "",
+            }
+        )
+        fallback_settings = settings.model_copy(
+            update={
+                "llm_provider": fallback_provider,
+                "llm_model": settings.llm_fallback_model,
+                "llm_api_key": settings.llm_fallback_api_key,
+                "llm_fallback_provider": "none",
+                "llm_fallback_model": "",
+                "llm_fallback_api_key": "",
+            }
+        )
+        primary_status = check_llm(primary_settings, http_get=http_get)
+        fallback_status = check_llm(fallback_settings, http_get=http_get)
+        statuses = {primary_status.status, fallback_status.status}
+        if ONLINE in statuses:
+            combined = ONLINE
+        elif statuses == {UNCONFIGURED}:
+            combined = UNCONFIGURED
+        elif UNKNOWN in statuses:
+            combined = UNKNOWN
+        else:
+            combined = OFFLINE
+        return LlmStatus(
+            combined,
+            f"{primary_status.provider}->{fallback_status.provider}",
+            f"{primary_status.model or '-'}->{fallback_status.model or '-'}",
+            f"primary {primary_status.status}; fallback {fallback_status.status}",
+        )
 
     if provider not in KNOWN_PROVIDERS:
         return LlmStatus(UNKNOWN, provider or None, None, "unrecognised LLM_PROVIDER value")
@@ -102,7 +139,7 @@ def check_llm(settings: Settings, *, http_get=None) -> LlmStatus:
     if provider == "ollama":
         return _probe_ollama(settings.ollama_base_url, model, http_get or _http_get)
 
-    # openai / anthropic / gemini — config validation only (no safe cheap probe).
+    # Remote API providers — config validation only (no safe cheap probe).
     if provider in _API_KEY_PROVIDERS:
         if not settings.llm_api_key:
             return LlmStatus(UNCONFIGURED, provider, model, "API key not configured")

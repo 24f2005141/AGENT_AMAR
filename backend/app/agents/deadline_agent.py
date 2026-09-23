@@ -42,6 +42,7 @@ from app.services.llm_service import (
     LLMUnavailableError,
     NullLLMClient,
 )
+from app.services.decision_service import JevDecisionBundle
 from app.utils import deadline_parsing as dp
 
 AGENT_NAME = "Deadline Agent"
@@ -88,6 +89,9 @@ class DeadlineAgent:
         email: NormalizedEmail,
         triage: AgentOutput | None = None,
         action: AgentOutput | None = None,
+        *,
+        decision: JevDecisionBundle | None = None,
+        allow_remote: bool = True,
     ) -> AgentOutput:
         started_at = self._now()
         errors: list[AgentError] = []
@@ -103,8 +107,23 @@ class DeadlineAgent:
 
         det = self._deterministic(email, reference_dt, category, actions)
         analysis = det
+        remote_recommended = self._should_use_llm(det)
+        jev_accepted = False
+        llm_invoked = False
 
-        if self._should_use_llm(det) and self._llm.is_available:
+        if remote_recommended and decision is not None:
+            jev_analysis = self._jev_analyze(det, decision, reference_dt)
+            if jev_analysis is not None:
+                analysis = jev_analysis
+                jev_accepted = True
+
+        if (
+            remote_recommended
+            and not jev_accepted
+            and allow_remote
+            and self._llm.is_available
+        ):
+            llm_invoked = True
             try:
                 analysis = self._llm_analyze(email, reference_dt, category, actions, det)
             except LLMResponseError as exc:
@@ -114,8 +133,23 @@ class DeadlineAgent:
                 errors.append(AgentError(code="llm_unavailable", message=str(exc)))
                 analysis = self._as_fallback(det)
 
-        data = self._build_data(email, reference_dt, analysis, primary_action_type)
+        routing = {
+            "remote_decision_recommended": remote_recommended,
+            "jev_accepted": jev_accepted,
+            "jev_cache_hit": bool(decision and decision.cache_hit),
+            "llm_invoked": llm_invoked,
+        }
+        data = self._build_data(
+            email, reference_dt, analysis, primary_action_type, routing=routing
+        )
         needs_review = self._needs_human_review(analysis, data)
+        if (
+            decision is not None
+            and decision.human_review is not None
+            and decision.human_review.probability
+            >= self.settings.jev_noul_decision_threshold
+        ):
+            needs_review = True
         status = AgentStatus.PARTIAL if errors else AgentStatus.OK
 
         return AgentOutput(
@@ -131,6 +165,103 @@ class DeadlineAgent:
             errors=errors,
             started_at=started_at,
             finished_at=self._now(),
+        )
+
+    def _jev_analyze(
+        self,
+        det: _Analysis,
+        decision: JevDecisionBundle,
+        reference_dt: datetime,
+    ) -> _Analysis | None:
+        # Jev judges candidates; deterministic code remains responsible for
+        # extraction and calendar normalization.  With no candidate there is
+        # nothing safe for a non-generating model to recover.
+        if not det.deadlines and not det.event_dates:
+            return None
+
+        threshold = self.settings.jev_choice_confidence_threshold
+        labels: dict[str, str] = {}
+        for item in det.deadlines:
+            label = decision.deadline_decision(item.raw_deadline_text, threshold)
+            if label is None:
+                return None
+            labels[item.raw_deadline_text] = label
+        for item in det.event_dates:
+            label = decision.deadline_decision(item.raw_text, threshold)
+            if label is None:
+                return None
+            labels[item.raw_text] = label
+
+        deadlines: list[DeadlineItem] = []
+        events: list[EventDate] = []
+        for item in det.deadlines:
+            label = labels[item.raw_deadline_text]
+            if label == DeadlineKind.DEADLINE.value:
+                judgment = decision.deadline_types[item.raw_deadline_text]
+                deadlines.append(
+                    item.model_copy(
+                        update={
+                            "source": ClassificationMethod.JEV,
+                            "confidence": round(
+                                max(item.confidence, judgment.probability), 4
+                            ),
+                        }
+                    )
+                )
+            elif label == DeadlineKind.EVENT_DATE.value:
+                events.append(
+                    EventDate(
+                        raw_text=item.raw_deadline_text,
+                        normalized=item.normalized_deadline,
+                        reason="The shared decision model classified the extracted date as an event date",
+                    )
+                )
+
+        for event in det.event_dates:
+            label = labels[event.raw_text]
+            if label == DeadlineKind.EVENT_DATE.value:
+                events.append(event)
+            elif label == DeadlineKind.DEADLINE.value:
+                normalized = self._llm_normalized(event.normalized)
+                judgment = decision.deadline_types[event.raw_text]
+                deadlines.append(
+                    DeadlineItem(
+                        deadline_id="pending",
+                        raw_deadline_text=event.raw_text,
+                        normalized_deadline=event.normalized,
+                        timezone=self.settings.default_timezone,
+                        date_only=False,
+                        ambiguity_flag=normalized is None,
+                        ambiguity_reason=(
+                            None if normalized is not None else "Date could not be normalized"
+                        ),
+                        is_past=bool(normalized and normalized < reference_dt),
+                        confidence=round(judgment.probability, 4),
+                        source=ClassificationMethod.JEV,
+                        evidence=event.raw_text,
+                    )
+                )
+
+        deadlines = self._dedupe(deadlines)
+        events = self._dedupe_events(events)
+        return _Analysis(
+            deadlines=deadlines,
+            event_dates=events,
+            method=ClassificationMethod.JEV,
+            reasoning=(
+                "The shared decision model classified the locally extracted date candidates; "
+                + self._reasoning(deadlines, events, self._detect_conflict(deadlines))
+            ),
+            overall_confidence=max(
+                [d.confidence for d in deadlines]
+                + [
+                    decision.deadline_types[raw].probability
+                    for raw in labels
+                    if raw in decision.deadline_types
+                ]
+                + [det.overall_confidence]
+            ),
+            conflicting=self._detect_conflict(deadlines),
         )
 
     # -- reference time (STEP 4) -----------------------------------
@@ -492,6 +623,7 @@ class DeadlineAgent:
         reference_dt: datetime,
         analysis: _Analysis,
         primary_action_type: str | None,
+        routing: dict | None = None,
     ) -> DeadlineData:
         tz_default = self.settings.default_timezone
         if not analysis.deadlines:
@@ -509,6 +641,7 @@ class DeadlineAgent:
                 deadlines=[],
                 event_dates=analysis.event_dates,
                 detection_method=analysis.method,
+                decision_routing=routing or {},
             )
 
         primary = self._pick_primary(analysis.deadlines, primary_action_type, reference_dt)
@@ -526,6 +659,7 @@ class DeadlineAgent:
             deadlines=analysis.deadlines,
             event_dates=analysis.event_dates,
             detection_method=analysis.method,
+            decision_routing=routing or {},
         )
 
     @staticmethod

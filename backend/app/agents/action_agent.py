@@ -43,6 +43,7 @@ from app.services.llm_service import (
     LLMUnavailableError,
     NullLLMClient,
 )
+from app.services.decision_service import JevDecisionBundle
 
 AGENT_NAME = "Action Agent"
 AGENT_VERSION = "0.1.0"
@@ -117,7 +118,14 @@ class ActionAgent:
 
     # -- public API -----------------------------------------------------
 
-    def detect(self, email: NormalizedEmail, triage: AgentOutput | None = None) -> AgentOutput:
+    def detect(
+        self,
+        email: NormalizedEmail,
+        triage: AgentOutput | None = None,
+        *,
+        decision: JevDecisionBundle | None = None,
+        allow_remote: bool = True,
+    ) -> AgentOutput:
         started_at = self._now()
         errors: list[AgentError] = []
 
@@ -127,8 +135,23 @@ class ActionAgent:
 
         det = self._deterministic(email, category)
         detection = det
+        remote_recommended = self._should_use_llm(det)
+        jev_accepted = False
+        llm_invoked = False
 
-        if self._should_use_llm(det) and self._llm.is_available:
+        if remote_recommended and decision is not None:
+            jev_detection = self._jev_detect(email, det, decision)
+            if jev_detection is not None:
+                detection = jev_detection
+                jev_accepted = True
+
+        if (
+            remote_recommended
+            and not jev_accepted
+            and allow_remote
+            and self._llm.is_available
+        ):
+            llm_invoked = True
             try:
                 detection = self._llm_detect(email, category, det)
             except LLMResponseError as exc:
@@ -138,8 +161,21 @@ class ActionAgent:
                 errors.append(AgentError(code="llm_unavailable", message=str(exc)))
                 detection = self._as_fallback(det)
 
-        data = self._build_data(email, detection)
+        routing = {
+            "remote_decision_recommended": remote_recommended,
+            "jev_accepted": jev_accepted,
+            "jev_cache_hit": bool(decision and decision.cache_hit),
+            "llm_invoked": llm_invoked,
+        }
+        data = self._build_data(email, detection, routing)
         needs_review = self._needs_human_review(detection, data)
+        if (
+            decision is not None
+            and decision.human_review is not None
+            and decision.human_review.probability
+            >= self.settings.jev_noul_decision_threshold
+        ):
+            needs_review = True
         status = AgentStatus.PARTIAL if errors else AgentStatus.OK
 
         return AgentOutput(
@@ -155,6 +191,71 @@ class ActionAgent:
             errors=errors,
             started_at=started_at,
             finished_at=self._now(),
+        )
+
+    def _jev_detect(
+        self,
+        email: NormalizedEmail,
+        det: _Detection,
+        decision: JevDecisionBundle,
+    ) -> _Detection | None:
+        threshold = self.settings.jev_noul_decision_threshold
+        resolved: dict[ActionType, bool] = {}
+        for action_type in ActionType:
+            value = decision.action_decision(action_type.value, threshold)
+            if value is None:
+                return None
+            resolved[action_type] = value
+
+        selected = [action_type for action_type, value in resolved.items() if value]
+        probabilities = [
+            decision.actions[action_type.value].probability for action_type in ActionType
+        ]
+        decisiveness = sum(max(p, 1.0 - p) for p in probabilities) / len(probabilities)
+        if not selected:
+            return _Detection(
+                actions=[],
+                method=ClassificationMethod.JEV,
+                reasoning="The shared decision model found no required recipient action.",
+                overall_confidence=round(decisiveness, 4),
+            )
+
+        existing = {ActionType(item.action_type): item for item in det.actions}
+        deadline_hint = self._deadline_hint(email.body or "") or self._deadline_hint(
+            email.subject or ""
+        )
+        actions: list[ActionItem] = []
+        for idx, action_type in enumerate(selected, start=1):
+            probability = decision.actions[action_type.value].probability
+            current = existing.get(action_type)
+            if current is not None:
+                item = current.model_copy(
+                    update={
+                        "action_id": f"act_{idx:03d}",
+                        "confidence": round(max(current.confidence, probability), 4),
+                    }
+                )
+            else:
+                item = ActionItem(
+                    action_id=f"act_{idx:03d}",
+                    action_type=action_type,
+                    action_description=self._describe(action_type, email.subject or ""),
+                    target_link=self._pick_link(email.links, action_type),
+                    related_email=email.email_id,
+                    blocking=action_type in _ALWAYS_BLOCKING,
+                    raw_deadline_hint=deadline_hint,
+                    confidence=round(probability, 4),
+                    status=ActionStatus.OPEN,
+                    evidence=None,
+                )
+            actions.append(item)
+
+        return _Detection(
+            actions=actions,
+            method=ClassificationMethod.JEV,
+            reasoning="The shared decision model confirmed required action types: "
+            + ", ".join(action_type.value for action_type in selected),
+            overall_confidence=round(decisiveness, 4),
         )
 
     # -- layer 1: deterministic --------------------------------------
@@ -439,7 +540,12 @@ class ActionAgent:
 
     # -- assemble --------------------------------------------------
 
-    def _build_data(self, email: NormalizedEmail, det: _Detection) -> ActionData:
+    def _build_data(
+        self,
+        email: NormalizedEmail,
+        det: _Detection,
+        routing: dict | None = None,
+    ) -> ActionData:
         if not det.actions:
             return ActionData(
                 action_required=False,
@@ -449,6 +555,7 @@ class ActionAgent:
                 related_email=email.email_id,
                 confidence=round(det.overall_confidence, 4),
                 detection_method=det.method,
+                decision_routing=routing or {},
             )
 
         primary = max(
@@ -469,6 +576,7 @@ class ActionAgent:
             related_email=email.email_id,
             confidence=round(det.overall_confidence, 4),
             detection_method=det.method,
+            decision_routing=routing or {},
         )
 
     def _needs_human_review(self, det: _Detection, data: ActionData) -> bool:

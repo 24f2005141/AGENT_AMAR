@@ -16,6 +16,12 @@ void main() {
       expect(emails.any((e) => e.analysis.priority == PriorityLevel.critical), true);
     });
 
+    test('AI processing mode can switch between all approaches', () async {
+      expect((await repository.getAiMode()).selected, 'conventional');
+      expect((await repository.setAiMode('jev')).selected, 'jev');
+      expect((await repository.setAiMode('laya')).selected, 'laya');
+    });
+
     test('getNeedsAttentionEmails filters and sorts actionable emails', () async {
       final attention = await repository.getNeedsAttentionEmails();
       expect(attention.isNotEmpty, true);

@@ -164,7 +164,8 @@ backend/
 │   │   ├── gmail_sync_service.py     incremental Gmail sync + persistent baseline  (Phase 12)
 │   │   ├── audit_service.py          tamper-evident hash-chained audit ledger  (Phase 14)
 │   │   ├── priority_context.py        memory adapter (senders + user prefs; DB-swappable)
-│   │   ├── llm_service.py             provider-agnostic LLM abstraction (none/openai/anthropic/gemini/ollama)
+│   │   ├── llm_service.py             generative providers + fallback (Gemini/Groq/etc.)
+│   │   ├── decision_service.py        one batched TypeSafe Jev decision per uncertain email
 │   │   └── token_store.py             TokenStore ABC + File/InMemory impls
 │   ├── core/  {config, errors, crypto (AES-256-GCM), sanitization, logging_setup}  (Phase 14)
 │   ├── utils/ {text_cleaning, deadline_parsing, priority_scoring}
@@ -422,8 +423,10 @@ The **local ML model**:
   before (`deterministic → LLM fallback`). A corrupt / stale model file is
   ignored the same way (logged once, never fatal).
 
-Supported LLM providers for layer 3 (`LLM_PROVIDER`): `gemini`, `openai`,
-`anthropic`, `ollama`, `none`.
+Supported LLM providers for layer 3 (`LLM_PROVIDER`): `gemini`, `groq`,
+`openai`, `anthropic`, `ollama`, `none`. An optional
+`LLM_FALLBACK_PROVIDER` is tried automatically if the primary request fails or
+returns unusable JSON.
 
 #### Training the local model
 
@@ -861,16 +864,56 @@ deadlines, detect actions, or touch Gmail.
 
 1. **Deterministic** (`triage_agent.py` + `triage_rules.py`) — keyword / sender /
    structure scoring, then the documented precedence rules. Always runs.
-2. **LLM fallback** (`llm_service.py`) — only when deterministic confidence is
-   `< TRIAGE_LLM_THRESHOLD` **and** a provider is configured. The hard precedence
-   rules still constrain the LLM's answer.
+2. **Local ML** — a trained TF-IDF classifier can answer high-confidence cases
+   without network traffic.
+3. **Shared typed decision** (`decision_service.py`) — when any local agent is
+   uncertain, the orchestrator sends one compact state with batched category,
+   action, deadline, priority and review questions. All agents reuse the same
+   typed response. Jev serves this via OpenRouter; Laya uses a local checkpoint.
+4. **Generative fallback** (`llm_service.py`) — only fields that the decision model cannot
+   resolve continue to Gemini/Groq. Deterministic precedence still constrains
+   every provider answer.
+
+**Configure Jev and Laya** in `.env`:
+
+```env
+DECISION_PROVIDER=jev
+OPENROUTER_API_KEY=<OpenRouter API key>
+JEV_MODEL=typesafe/jev-1.13
+JEV_ENDPOINT_URL=https://openrouter.ai/api/alpha/decisions
+JEV_TIMEOUT_SECONDS=30
+JEV_CHOICE_CONFIDENCE_THRESHOLD=0.85
+JEV_NOUL_DECISION_THRESHOLD=0.85
+JEV_CACHE_SIZE=512
+JEV_MAX_STATE_CHARS=6000
+LAYA_MODEL_ID=convaiinnovations/laya
+LAYA_MODEL_SUBFOLDER=typed-decisions
+LAYA_DEVICE=cpu
+AI_MODE_STATE_PATH=data/ai_mode.json
+```
+
+The Flutter Profile screen can switch `conventional`, `jev`, or `laya`. This is a
+single-user global backend setting, persisted across restarts; authenticated
+`PUT /api/v1/system/ai-mode` changes it and public `GET` reads it. Jev is charged
+by OpenRouter. Laya's 843 MB typed-decision checkpoint is downloaded on first
+use and is very slow on a CPU-only laptop. Neither decision model drafts replies
+or performs date arithmetic. If it fails or has low confidence, the existing
+Gemini/Groq and deterministic fallback paths continue unchanged. Reprocessing
+an unchanged email reuses the in-process content-hash cache. See the
+quantitative comparison in `../docs/benchmarks/AI_MODE_COMPARISON_2026-09-23.md`;
+it is a small, stage-level benchmark, not an end-to-end speed claim. The
+checkpoint and provider-equivalence caveats are in
+`../docs/benchmarks/LAYA_INTEGRATION_RESEARCH_2026-09-23.md`.
 
 **Enable the LLM (optional)** in `.env`:
 
 ```env
-LLM_PROVIDER=anthropic          # or: openai
-LLM_MODEL=claude-sonnet-5       # openai e.g. gpt-4o-mini
-LLM_API_KEY=sk-...
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-3.5-flash-lite
+LLM_API_KEY=<Gemini API key>
+LLM_FALLBACK_PROVIDER=groq
+LLM_FALLBACK_MODEL=openai/gpt-oss-20b
+LLM_FALLBACK_API_KEY=<Groq API key>
 ```
 
 Confidence thresholds (all in `app/core/config.py` / `.env`):

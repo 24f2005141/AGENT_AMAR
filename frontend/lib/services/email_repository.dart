@@ -1,5 +1,6 @@
 import '../data/mock_data.dart';
 import '../dto/app_user_dto.dart';
+import '../dto/ai_mode_dto.dart';
 import '../dto/auth_flow_dto.dart';
 import '../dto/auth_status_dto.dart';
 import '../dto/email_state_dto.dart';
@@ -49,6 +50,8 @@ abstract class EmailRepository {
 
   // System connection status (backend + configured LLM, checked server-side)
   Future<SystemStatusDto> getSystemStatus();
+  Future<AiModeDto> getAiMode();
+  Future<AiModeDto> setAiMode(String mode);
 
   // Auth & incremental Gmail sync (Phase 12)
   Future<AuthStatusDto> getAuthStatus();
@@ -71,6 +74,7 @@ abstract class EmailRepository {
     bool? actionRequired,
     bool? viewed,
     bool? completed,
+
     /// Attention-dashboard filter (backend-derived). `true` = only emails that
     /// still need attention (the homepage feed); `false` = the resolved /
     /// acknowledged complement (history); `null` = the full list.
@@ -88,7 +92,10 @@ abstract class EmailRepository {
   /// Manually correct an email's canonical primary category (Phase 18). Returns
   /// the updated [Email] so the caller can move it between sections immediately.
   /// Throws [ApiException] (404 owner/missing, 422 invalid category).
-  Future<Email> submitClassificationFeedback(String emailId, PrimaryCategory category);
+  Future<Email> submitClassificationFeedback(
+    String emailId,
+    PrimaryCategory category,
+  );
 
   /// AI reply drafting (backend runs the LLM; exactly 3 options).
   /// Throws [ApiException] on failure (503 = AI unavailable, 502 = bad response).
@@ -102,7 +109,10 @@ abstract class EmailRepository {
   Future<List<Email>> getNeedsAttentionEmails();
   Future<List<PendingActionDto>> getPendingActions({int limit = 100});
   Future<List<Email>> getDeadlineEmails({int? withinHours});
-  Future<List<UpcomingDeadlineDto>> getUpcomingDeadlinesDto({int? withinHours, int limit = 100});
+  Future<List<UpcomingDeadlineDto>> getUpcomingDeadlinesDto({
+    int? withinHours,
+    int limit = 100,
+  });
 
   // Mutations
   Future<Email> markEmailViewed(String emailId);
@@ -161,7 +171,10 @@ class ApiEmailRepository implements EmailRepository {
   Future<GoogleSessionDto> exchangeSession(String code, {String? state}) async {
     final res = await _client.post(
       '/api/v1/auth/session/exchange',
-      body: {'code': code, if (state != null && state.isNotEmpty) 'state': state},
+      body: {
+        'code': code,
+        if (state != null && state.isNotEmpty) 'state': state,
+      },
     );
     return GoogleSessionDto.fromJson(res as Map<String, dynamic>);
   }
@@ -187,8 +200,10 @@ class ApiEmailRepository implements EmailRepository {
 
   @override
   Future<void> logout({String? fcmToken}) async {
-    await _client.post('/api/v1/auth/logout',
-        body: fcmToken != null ? {'fcm_token': fcmToken} : null);
+    await _client.post(
+      '/api/v1/auth/logout',
+      body: fcmToken != null ? {'fcm_token': fcmToken} : null,
+    );
   }
 
   @override
@@ -199,24 +214,45 @@ class ApiEmailRepository implements EmailRepository {
     String? appVersion,
     String? previousToken,
   }) async {
-    await _client.post('/api/v1/devices/register', body: {
-      'fcm_token': fcmToken,
-      'platform': platform,
-      if (deviceLabel != null) 'device_label': deviceLabel,
-      if (appVersion != null) 'app_version': appVersion,
-      if (previousToken != null) 'previous_token': previousToken,
-    });
+    await _client.post(
+      '/api/v1/devices/register',
+      body: {
+        'fcm_token': fcmToken,
+        'platform': platform,
+        if (deviceLabel != null) 'device_label': deviceLabel,
+        if (appVersion != null) 'app_version': appVersion,
+        if (previousToken != null) 'previous_token': previousToken,
+      },
+    );
   }
 
   @override
   Future<void> unregisterDevice(String fcmToken) async {
-    await _client.post('/api/v1/devices/unregister', body: {'fcm_token': fcmToken});
+    await _client.post(
+      '/api/v1/devices/unregister',
+      body: {'fcm_token': fcmToken},
+    );
   }
 
   @override
   Future<SystemStatusDto> getSystemStatus() async {
     final res = await _client.get('/api/v1/system/status');
     return SystemStatusDto.fromJson(res as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AiModeDto> getAiMode() async {
+    final res = await _client.get('/api/v1/system/ai-mode');
+    return AiModeDto.fromJson(res as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AiModeDto> setAiMode(String mode) async {
+    final res = await _client.put(
+      '/api/v1/system/ai-mode',
+      body: {'mode': mode},
+    );
+    return AiModeDto.fromJson(res as Map<String, dynamic>);
   }
 
   @override
@@ -264,7 +300,9 @@ class ApiEmailRepository implements EmailRepository {
 
     final res = await _client.get('/api/v1/emails', queryParameters: query);
     final list = res as List<dynamic>;
-    final dtos = list.map((e) => EmailStateOutDto.fromJson(e as Map<String, dynamic>)).toList();
+    final dtos = list
+        .map((e) => EmailStateOutDto.fromJson(e as Map<String, dynamic>))
+        .toList();
     return dtos.map(DtoMapper.mapEmailState).toList();
   }
 
@@ -289,7 +327,9 @@ class ApiEmailRepository implements EmailRepository {
   Future<List<ProcessingRunDto>> getEmailProcessingRuns(String id) async {
     final res = await _client.get('/api/v1/emails/$id/processing');
     final list = res as List<dynamic>;
-    return list.map((e) => ProcessingRunDto.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => ProcessingRunDto.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -300,13 +340,16 @@ class ApiEmailRepository implements EmailRepository {
 
   @override
   Future<Email> submitClassificationFeedback(
-      String emailId, PrimaryCategory category) async {
+    String emailId,
+    PrimaryCategory category,
+  ) async {
     final res = await _client.post(
       '/api/v1/emails/$emailId/classification-feedback',
       body: {'category': category.wire},
     );
     return DtoMapper.mapEmailState(
-        EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>));
+      EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>),
+    );
   }
 
   @override
@@ -342,7 +385,9 @@ class ApiEmailRepository implements EmailRepository {
       queryParameters: {'limit': limit},
     );
     final list = res as List<dynamic>;
-    return list.map((e) => PendingActionDto.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => PendingActionDto.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -360,9 +405,14 @@ class ApiEmailRepository implements EmailRepository {
       if (withinHours != null) 'within_hours': withinHours,
       'limit': limit,
     };
-    final res = await _client.get('/api/v1/deadlines/upcoming', queryParameters: query);
+    final res = await _client.get(
+      '/api/v1/deadlines/upcoming',
+      queryParameters: query,
+    );
     final list = res as List<dynamic>;
-    return list.map((e) => UpcomingDeadlineDto.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => UpcomingDeadlineDto.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -376,14 +426,16 @@ class ApiEmailRepository implements EmailRepository {
   Future<Email> markEmailComplete(String emailId) async {
     final res = await _client.patch('/api/v1/emails/$emailId/complete');
     return DtoMapper.mapEmailState(
-        EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>));
+      EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>),
+    );
   }
 
   @override
   Future<Email> reopenEmail(String emailId) async {
     final res = await _client.patch('/api/v1/emails/$emailId/reopen');
     return DtoMapper.mapEmailState(
-        EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>));
+      EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>),
+    );
   }
 
   @override
@@ -395,7 +447,10 @@ class ApiEmailRepository implements EmailRepository {
   @override
   Future<Email> snoozeEmail(String emailId, DateTime until) async {
     final body = SnoozeRequestDto(snoozedUntil: until).toJson();
-    final res = await _client.patch('/api/v1/emails/$emailId/snooze', body: body);
+    final res = await _client.patch(
+      '/api/v1/emails/$emailId/snooze',
+      body: body,
+    );
     final detail = EmailStateDetailOutDto.fromJson(res as Map<String, dynamic>);
     return DtoMapper.mapEmailState(detail);
   }
@@ -427,12 +482,12 @@ class ApiEmailRepository implements EmailRepository {
 
   @override
   Future<List<ReminderItem>> getReminders({String? status}) async {
-    final query = <String, dynamic>{
-      if (status != null) 'status': status,
-    };
+    final query = <String, dynamic>{if (status != null) 'status': status};
     final res = await _client.get('/api/v1/reminders', queryParameters: query);
     final list = res as List<dynamic>;
-    final dtos = list.map((e) => ReminderOutDto.fromJson(e as Map<String, dynamic>)).toList();
+    final dtos = list
+        .map((e) => ReminderOutDto.fromJson(e as Map<String, dynamic>))
+        .toList();
     return dtos.map((r) => DtoMapper.mapReminder(r)).toList();
   }
 
@@ -440,7 +495,9 @@ class ApiEmailRepository implements EmailRepository {
   Future<List<ReminderOutDto>> getEmailReminders(String emailId) async {
     final res = await _client.get('/api/v1/emails/$emailId/reminders');
     final list = res as List<dynamic>;
-    return list.map((e) => ReminderOutDto.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => ReminderOutDto.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -481,21 +538,30 @@ class ApiEmailRepository implements EmailRepository {
       if (severity != null) 'severity': severity,
       if (type != null) 'type': type,
     };
-    final res = await _client.get('/api/v1/notifications', queryParameters: query);
+    final res = await _client.get(
+      '/api/v1/notifications',
+      queryParameters: query,
+    );
     final list = res as List<dynamic>;
-    final dtos = list.map((e) => NotificationOutDto.fromJson(e as Map<String, dynamic>)).toList();
+    final dtos = list
+        .map((e) => NotificationOutDto.fromJson(e as Map<String, dynamic>))
+        .toList();
     return dtos.map((n) => DtoMapper.mapNotification(n)).toList();
   }
 
   @override
   Future<MonitorCheckResultDto> runDeadlineCheck({DateTime? now}) async {
     final body = now != null ? {'now': now.toUtc().toIso8601String()} : null;
-    final res = await _client.post('/api/v1/monitor/deadlines/check', body: body);
+    final res = await _client.post(
+      '/api/v1/monitor/deadlines/check',
+      body: body,
+    );
     return MonitorCheckResultDto.fromJson(res as Map<String, dynamic>);
   }
 }
 
 class MockEmailRepository implements EmailRepository {
+  String _selectedAiMode = 'conventional';
   List<Email> _emails = [];
   List<ReminderItem> _reminders = [];
   List<NotificationEvent> _notifications = [];
@@ -511,29 +577,45 @@ class MockEmailRepository implements EmailRepository {
   }
 
   @override
-  Future<GoogleAuthStartDto> startGoogleAuth() async => const GoogleAuthStartDto(
+  Future<GoogleAuthStartDto> startGoogleAuth() async =>
+      const GoogleAuthStartDto(
         authorizationUrl: 'https://accounts.google.com/o/oauth2/auth?mock=1',
         flowId: 'mock-flow',
       );
 
   @override
-  Future<GoogleSessionDto> exchangeSession(String code, {String? state}) async =>
-      const GoogleSessionDto(
-        sessionToken: 'mock-session-token',
-        user: AppUserDto(id: 1, googleEmail: 'demo.student@gmail.com', displayName: 'Demo Student'),
-      );
+  Future<GoogleSessionDto> exchangeSession(
+    String code, {
+    String? state,
+  }) async => const GoogleSessionDto(
+    sessionToken: 'mock-session-token',
+    user: AppUserDto(
+      id: 1,
+      googleEmail: 'demo.student@gmail.com',
+      displayName: 'Demo Student',
+    ),
+  );
 
   @override
-  Future<GoogleSessionDto?> pollGoogleSession(String flowId) async => const GoogleSessionDto(
+  Future<GoogleSessionDto?> pollGoogleSession(String flowId) async =>
+      const GoogleSessionDto(
         sessionToken: 'mock-session-token',
-        user: AppUserDto(id: 1, googleEmail: 'demo.student@gmail.com', displayName: 'Demo Student'),
+        user: AppUserDto(
+          id: 1,
+          googleEmail: 'demo.student@gmail.com',
+          displayName: 'Demo Student',
+        ),
       );
 
   @override
   Future<AuthMeDto> getCurrentUser() async => const AuthMeDto(
-        user: AppUserDto(id: 1, googleEmail: 'demo.student@gmail.com', displayName: 'Demo Student'),
-        gmailConnected: true,
-      );
+    user: AppUserDto(
+      id: 1,
+      googleEmail: 'demo.student@gmail.com',
+      displayName: 'Demo Student',
+    ),
+    gmailConnected: true,
+  );
 
   @override
   Future<void> logout({String? fcmToken}) async {}
@@ -559,6 +641,26 @@ class MockEmailRepository implements EmailRepository {
       llmModel: 'qwen2.5:3b',
       llmDetail: '2 model(s) available',
     );
+  }
+
+  @override
+  Future<AiModeDto> getAiMode() async => AiModeDto(
+    selected: _selectedAiMode,
+    options: const [
+      AiModeOptionDto(
+        id: 'conventional',
+        label: 'Gemini + Groq',
+        available: true,
+      ),
+      AiModeOptionDto(id: 'jev', label: 'Jev AI', available: true),
+      AiModeOptionDto(id: 'laya', label: 'Laya (local)', available: true),
+    ],
+  );
+
+  @override
+  Future<AiModeDto> setAiMode(String mode) async {
+    _selectedAiMode = mode;
+    return getAiMode();
   }
 
   @override
@@ -610,10 +712,16 @@ class MockEmailRepository implements EmailRepository {
     _ensureInitialized();
     var list = _emails;
     if (priority != null) {
-      list = list.where((e) => e.analysis.priority.displayName == priority.toUpperCase()).toList();
+      list = list
+          .where(
+            (e) => e.analysis.priority.displayName == priority.toUpperCase(),
+          )
+          .toList();
     }
     if (actionRequired != null) {
-      list = list.where((e) => e.analysis.actionRequired == actionRequired).toList();
+      list = list
+          .where((e) => e.analysis.actionRequired == actionRequired)
+          .toList();
     }
     if (completed != null) {
       list = list.where((e) => e.userState.isCompleted == completed).toList();
@@ -676,7 +784,8 @@ class MockEmailRepository implements EmailRepository {
       senderName: email.senderName,
       senderEmail: email.senderEmail,
       receivedAt: email.receivedAt,
-      body: '${email.snippet}\n\n'
+      body:
+          '${email.snippet}\n\n'
           'This is the full mock email body. It spans multiple lines so the '
           'reader can scroll.\n\nRegards,\n${email.senderName}',
       bodyFormat: 'text',
@@ -689,7 +798,9 @@ class MockEmailRepository implements EmailRepository {
 
   @override
   Future<Email> submitClassificationFeedback(
-      String emailId, PrimaryCategory category) async {
+    String emailId,
+    PrimaryCategory category,
+  ) async {
     _ensureInitialized();
     final index = _emails.indexWhere((e) => e.id == emailId);
     if (index == -1) throw Exception('Email not found');
@@ -702,27 +813,30 @@ class MockEmailRepository implements EmailRepository {
 
   @override
   Future<ReplySuggestionsDto> getReplySuggestions(String emailId) async {
-    return ReplySuggestionsDto(emailId: emailId, suggestions: const [
-      ReplySuggestionDto(
-        id: 'option_1',
-        label: 'Direct',
-        body: 'Yes, I will attend the project meeting tomorrow.',
-      ),
-      ReplySuggestionDto(
-        id: 'option_2',
-        label: 'Professional',
-        body:
-            'Thank you for the note. I expect to be able to join the meeting tomorrow; '
-            'please let me know if there is anything I should review beforehand.',
-      ),
-      ReplySuggestionDto(
-        id: 'option_3',
-        label: 'Alternative',
-        body:
-            'Unfortunately I do not think I can make the meeting tomorrow. '
-            'Could you share the key updates afterwards?',
-      ),
-    ]);
+    return ReplySuggestionsDto(
+      emailId: emailId,
+      suggestions: const [
+        ReplySuggestionDto(
+          id: 'option_1',
+          label: 'Direct',
+          body: 'Yes, I will attend the project meeting tomorrow.',
+        ),
+        ReplySuggestionDto(
+          id: 'option_2',
+          label: 'Professional',
+          body:
+              'Thank you for the note. I expect to be able to join the meeting tomorrow; '
+              'please let me know if there is anything I should review beforehand.',
+        ),
+        ReplySuggestionDto(
+          id: 'option_3',
+          label: 'Alternative',
+          body:
+              'Unfortunately I do not think I can make the meeting tomorrow. '
+              'Could you share the key updates afterwards?',
+        ),
+      ],
+    );
   }
 
   @override
@@ -739,9 +853,13 @@ class MockEmailRepository implements EmailRepository {
   @override
   Future<List<Email>> getNeedsAttentionEmails() async {
     _ensureInitialized();
-    return _emails.where((e) => e.analysis.actionRequired && !e.userState.isCompleted).toList()
+    return _emails
+        .where((e) => e.analysis.actionRequired && !e.userState.isCompleted)
+        .toList()
       ..sort((a, b) {
-        final pCompare = _priorityWeight(b.analysis.priority).compareTo(_priorityWeight(a.analysis.priority));
+        final pCompare = _priorityWeight(
+          b.analysis.priority,
+        ).compareTo(_priorityWeight(a.analysis.priority));
         if (pCompare != 0) return pCompare;
         if (a.analysis.deadline != null && b.analysis.deadline != null) {
           return a.analysis.deadline!.compareTo(b.analysis.deadline!);
@@ -753,14 +871,18 @@ class MockEmailRepository implements EmailRepository {
   @override
   Future<List<PendingActionDto>> getPendingActions({int limit = 100}) async {
     final emails = await getNeedsAttentionEmails();
-    return emails.map((e) => PendingActionDto(
-      actionRef: 'act_001',
-      actionType: e.analysis.actionType ?? 'OTHER',
-      description: e.analysis.actionDescription,
-      emailId: e.id,
-      subject: e.subject,
-      priorityLevel: e.analysis.priority.displayName,
-    )).toList();
+    return emails
+        .map(
+          (e) => PendingActionDto(
+            actionRef: 'act_001',
+            actionType: e.analysis.actionType ?? 'OTHER',
+            description: e.analysis.actionDescription,
+            emailId: e.id,
+            subject: e.subject,
+            priorityLevel: e.analysis.priority.displayName,
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -771,15 +893,22 @@ class MockEmailRepository implements EmailRepository {
   }
 
   @override
-  Future<List<UpcomingDeadlineDto>> getUpcomingDeadlinesDto({int? withinHours, int limit = 100}) async {
+  Future<List<UpcomingDeadlineDto>> getUpcomingDeadlinesDto({
+    int? withinHours,
+    int limit = 100,
+  }) async {
     final emails = await getDeadlineEmails(withinHours: withinHours);
-    return emails.map((e) => UpcomingDeadlineDto(
-      deadlineRef: 'dl_001',
-      deadlineDatetime: e.analysis.deadline,
-      emailId: e.id,
-      subject: e.subject,
-      priorityLevel: e.analysis.priority.displayName,
-    )).toList();
+    return emails
+        .map(
+          (e) => UpcomingDeadlineDto(
+            deadlineRef: 'dl_001',
+            deadlineDatetime: e.analysis.deadline,
+            emailId: e.id,
+            subject: e.subject,
+            priorityLevel: e.analysis.priority.displayName,
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -802,7 +931,10 @@ class MockEmailRepository implements EmailRepository {
     final index = _emails.indexWhere((e) => e.id == emailId);
     if (index == -1) throw Exception('Email not found');
     _emails[index] = _emails[index].copyWith(
-      userState: _emails[index].userState.copyWith(isViewed: true, isCompleted: true),
+      userState: _emails[index].userState.copyWith(
+        isViewed: true,
+        isCompleted: true,
+      ),
     );
     return _emails[index];
   }
@@ -824,10 +956,13 @@ class MockEmailRepository implements EmailRepository {
     var n = 0;
     for (var i = 0; i < _emails.length; i++) {
       final e = _emails[i];
-      final nonActionable = e.primaryCategory == PrimaryCategory.important ||
+      final nonActionable =
+          e.primaryCategory == PrimaryCategory.important ||
           e.primaryCategory == PrimaryCategory.lowPriority;
       if (nonActionable && e.isActive && !e.userState.isViewed) {
-        _emails[i] = e.copyWith(userState: e.userState.copyWith(isViewed: true));
+        _emails[i] = e.copyWith(
+          userState: e.userState.copyWith(isViewed: true),
+        );
         n++;
       }
     }

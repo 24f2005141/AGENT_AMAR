@@ -25,7 +25,7 @@ class ApiClient {
   bool _sessionExpiredReported = false;
 
   ApiClient({http.Client? client, this.tokenProvider, this.onUnauthorized})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   Uri _buildUri(String path, [Map<String, dynamic>? queryParameters]) {
     final base = ApiConfig.baseUrl.endsWith('/')
@@ -61,7 +61,10 @@ class ApiClient {
     return headers;
   }
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     final uri = _buildUri(path, queryParameters);
     try {
       final response = await _client
@@ -120,7 +123,31 @@ class ApiClient {
     }
   }
 
-  Future<dynamic> delete(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<dynamic> put(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    final uri = _buildUri(path, queryParameters);
+    try {
+      final encodedBody = body != null ? jsonEncode(body) : null;
+      final response = await _client
+          .put(uri, headers: _headers(), body: encodedBody)
+          .timeout(ApiConfig.receiveTimeout);
+      return _handleResponse(response);
+    } on SocketException catch (e) {
+      throw ApiException.networkError(e);
+    } on TimeoutException {
+      throw ApiException.timeout();
+    } on http.ClientException catch (e) {
+      throw ApiException.networkError(e);
+    }
+  }
+
+  Future<dynamic> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     final uri = _buildUri(path, queryParameters);
     try {
       final response = await _client
@@ -156,7 +183,9 @@ class ApiClient {
     // Centralised session-expiry handling. `isAuthExpired` is true only for a
     // missing/invalid/expired app session — NOT for `GmailNotConnectedError`
     // (also 401), which means "reconnect Gmail", not "log out".
-    if (error.isAuthExpired && onUnauthorized != null && !_sessionExpiredReported) {
+    if (error.isAuthExpired &&
+        onUnauthorized != null &&
+        !_sessionExpiredReported) {
       _sessionExpiredReported = true;
       onUnauthorized!();
     }

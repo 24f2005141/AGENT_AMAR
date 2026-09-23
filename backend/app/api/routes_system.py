@@ -8,10 +8,23 @@ login). Lightweight: never runs an LLM completion, Gmail sync, or agent workflow
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.deps import get_current_user
 from app.core.config import Settings, get_settings
-from app.models.system import BackendComponent, LlmComponent, SystemStatusResponse
+from app.db.models import User
+from app.models.system import (
+    AiModeResponse,
+    AiModeUpdate,
+    BackendComponent,
+    LlmComponent,
+    SystemStatusResponse,
+)
+from app.services.ai_mode_service import (
+    ensure_mode_available,
+    get_ai_mode_store,
+    mode_options,
+)
 from app.services.system_status import check_llm
 
 router = APIRouter(prefix="/api/v1/system", tags=["system"])
@@ -29,3 +42,27 @@ def system_status(settings: Settings = Depends(get_settings)) -> SystemStatusRes
             detail=llm.detail,
         ),
     )
+
+
+@router.get("/ai-mode", response_model=AiModeResponse)
+def get_ai_mode(settings: Settings = Depends(get_settings)) -> AiModeResponse:
+    """Return the active approach and safe availability metadata."""
+    return AiModeResponse(
+        selected=get_ai_mode_store().get(),
+        options=mode_options(settings),
+    )
+
+
+@router.put("/ai-mode", response_model=AiModeResponse)
+def set_ai_mode(
+    payload: AiModeUpdate,
+    settings: Settings = Depends(get_settings),
+    _user: User = Depends(get_current_user),
+) -> AiModeResponse:
+    """Persist the personal backend's active decision approach."""
+    try:
+        ensure_mode_available(payload.mode, settings)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    get_ai_mode_store().set(payload.mode)
+    return AiModeResponse(selected=payload.mode, options=mode_options(settings))

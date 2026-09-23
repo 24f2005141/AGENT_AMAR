@@ -53,6 +53,7 @@ from app.services.llm_service import (
     LLMUnavailableError,
     NullLLMClient,
 )
+from app.services.decision_service import JevDecisionBundle
 
 AGENT_NAME = "Triage Agent"
 AGENT_VERSION = "0.1.0"
@@ -161,7 +162,14 @@ class TriageAgent:
 
     # -- public API -----------------------------------------------------
 
-    def classify(self, email: NormalizedEmail) -> AgentOutput:
+    def classify(
+        self,
+        email: NormalizedEmail,
+        *,
+        decision: JevDecisionBundle | None = None,
+        allow_remote: bool = True,
+        record_metrics: bool = True,
+    ) -> AgentOutput:
         started_at = self._now()
         errors: list[AgentError] = []
 
@@ -170,6 +178,8 @@ class TriageAgent:
 
         ml = _MlOutcome(reject_reason="deterministic_confident")
         llm_invoked = False
+        jev_accepted = False
+        remote_recommended = False
 
         # Layer 1.5 (local ML) + Layer 2 (LLM) — only when the deterministic
         # signal is weak. The local model is tried first; if it is confident and
@@ -179,7 +189,20 @@ class TriageAgent:
             ml = self._ml_assess(email, det)
             if ml.assessment is not None:
                 assessment = ml.assessment
-            elif self._llm.is_available:
+            else:
+                remote_recommended = True
+            if ml.assessment is None and decision is not None:
+                jev = self._jev_classify(decision)
+                if jev is not None:
+                    assessment = self._merge(det, jev, email)
+                    assessment.method = ClassificationMethod.JEV
+                    jev_accepted = True
+            if (
+                ml.assessment is None
+                and not jev_accepted
+                and allow_remote
+                and self._llm.is_available
+            ):
                 llm_invoked = True
                 try:
                     llm = self._llm_classify(email, det)
@@ -201,10 +224,22 @@ class TriageAgent:
             "ml_reject_reason": (None if method_value == ClassificationMethod.ML.value
                                  else ml.reject_reason),
             "llm_invoked": llm_invoked,
+            "remote_decision_recommended": remote_recommended,
+            "jev_accepted": jev_accepted,
+            "jev_cache_hit": bool(decision and decision.cache_hit),
         }
-        get_classification_metrics().record(routing)
-
+        # Preview passes must not double-count production routing metrics.
+        if record_metrics:
+            get_classification_metrics().record(routing)
+        # Human-review signals are conservative: Jev may add review, never remove it.
         needs_review = self._needs_human_review(assessment)
+        if (
+            decision is not None
+            and decision.human_review is not None
+            and decision.human_review.probability
+            >= self.settings.jev_noul_decision_threshold
+        ):
+            needs_review = True
         data = self._build_data(assessment, needs_review, routing)
         status = AgentStatus.PARTIAL if errors else AgentStatus.OK
 
@@ -222,6 +257,30 @@ class TriageAgent:
             started_at=started_at,
             finished_at=self._now(),
         )
+
+    def _jev_classify(self, decision: JevDecisionBundle) -> LLMClassification | None:
+        category = decision.accepted_choice(
+            "category", self.settings.jev_choice_confidence_threshold
+        )
+        if category is None or decision.category is None:
+            return None
+        importance = decision.accepted_choice(
+            "importance", self.settings.jev_choice_confidence_threshold
+        )
+        try:
+            return LLMClassification(
+                category=TriageCategory(category),
+                importance_estimate=(
+                    ImportanceEstimate(importance) if importance is not None else None
+                ),
+                confidence=min(
+                    decision.category.confidence,
+                    decision.category.probability,
+                ),
+                reasoning="The shared decision model supplied the typed category decision.",
+            )
+        except (ValueError, ValidationError):
+            return None
 
     # -- layer 1: deterministic --------------------------------------
 

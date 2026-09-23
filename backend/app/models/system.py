@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -24,3 +26,20 @@ class LlmComponent(BaseModel):
 class SystemStatusResponse(BaseModel):
     backend: BackendComponent = Field(default_factory=BackendComponent)
     llm: LlmComponent
+
+
+class AiModeOption(BaseModel):
+    id: Literal["conventional", "jev", "laya"]
+    label: str
+    available: bool
+    model: str | None = None
+    detail: str | None = None
+
+
+class AiModeResponse(BaseModel):
+    selected: Literal["conventional", "jev", "laya"]
+    options: list[AiModeOption]
+
+
+class AiModeUpdate(BaseModel):
+    mode: Literal["conventional", "jev", "laya"]

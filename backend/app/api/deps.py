@@ -23,6 +23,7 @@ from app.core.errors import AuthRequiredError, GmailNotConnectedError
 from app.db.models import User
 from app.db.session import get_db as _get_db
 from app.services.auth_session_service import AuthSessionService
+from app.services.ai_mode_service import effective_ai_settings
 from app.services.classification_feedback_service import ClassificationFeedbackService
 from app.services.deadline_monitor_service import DeadlineMonitorService
 from app.services.gmail_sync_service import GmailSyncService
@@ -32,6 +33,10 @@ from app.services.gmail_auth_service import GmailAuthService
 from app.services.gmail_service import GmailService
 from app.ml.email_classifier import EmailMLClassifier, get_email_ml_classifier
 from app.services.llm_service import LLMClient, build_llm_client
+from app.services.decision_service import (
+    DecisionClient,
+    get_shared_decision_client,
+)
 from app.services.priority_context import PriorityContext, get_priority_context
 from app.services.token_store import DbTokenStore, TokenStore
 
@@ -84,26 +89,38 @@ def get_intake_agent() -> MailIntakeAgent:
     return _cached_intake_agent()
 
 
-def get_llm_client(settings: Settings = Depends(get_settings)) -> LLMClient:
+def get_effective_ai_settings(
+    settings: Settings = Depends(get_settings),
+) -> Settings:
+    """Settings with the persisted Flutter-selected decision mode applied."""
+    return effective_ai_settings(settings)
+
+
+def get_llm_client(settings: Settings = Depends(get_effective_ai_settings)) -> LLMClient:
     """LLM client chosen from settings; NullLLMClient when unconfigured."""
     return build_llm_client(settings)
 
 
-def get_reply_llm_client(settings: Settings = Depends(get_settings)) -> LLMClient:
+def get_reply_llm_client(settings: Settings = Depends(get_effective_ai_settings)) -> LLMClient:
     """Same provider as :func:`get_llm_client`, with the longer reply-drafting
     timeout so a slow local model does not 503 the reply-suggestions endpoint."""
     return build_llm_client(settings, timeout=settings.llm_reply_timeout_resolved)
 
 
+def get_decision_client(settings: Settings = Depends(get_effective_ai_settings)) -> DecisionClient:
+    """Selected shared decision client, or a no-op in conventional mode."""
+    return get_shared_decision_client(settings)
+
+
 def get_email_ml_classifier_dep(
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_effective_ai_settings),
 ) -> EmailMLClassifier | None:
     """Local ML pre-classifier, or ``None`` when disabled / no model present."""
     return get_email_ml_classifier(settings)
 
 
 def get_triage_agent(
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_effective_ai_settings),
     llm_client: LLMClient = Depends(get_llm_client),
     ml_classifier: EmailMLClassifier | None = Depends(get_email_ml_classifier_dep),
 ) -> TriageAgent:
@@ -111,14 +128,14 @@ def get_triage_agent(
 
 
 def get_action_agent(
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_effective_ai_settings),
     llm_client: LLMClient = Depends(get_llm_client),
 ) -> ActionAgent:
     return ActionAgent(settings=settings, llm_client=llm_client)
 
 
 def get_deadline_agent(
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_effective_ai_settings),
     llm_client: LLMClient = Depends(get_llm_client),
 ) -> DeadlineAgent:
     return DeadlineAgent(settings=settings, llm_client=llm_client)
@@ -129,7 +146,7 @@ def get_priority_context_dep() -> PriorityContext:
 
 
 def get_priority_agent(
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_effective_ai_settings),
     llm_client: LLMClient = Depends(get_llm_client),
     context: PriorityContext = Depends(get_priority_context_dep),
 ) -> PriorityAgent:
@@ -137,13 +154,21 @@ def get_priority_agent(
 
 
 def get_amar_orchestrator(
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_effective_ai_settings),
     triage: TriageAgent = Depends(get_triage_agent),
     action: ActionAgent = Depends(get_action_agent),
     deadline: DeadlineAgent = Depends(get_deadline_agent),
     priority: PriorityAgent = Depends(get_priority_agent),
+    decision_client: DecisionClient = Depends(get_decision_client),
 ) -> AMAROrchestrator:
-    return AMAROrchestrator(triage, action, deadline, priority, settings=settings)
+    return AMAROrchestrator(
+        triage,
+        action,
+        deadline,
+        priority,
+        settings=settings,
+        decision_client=decision_client,
+    )
 
 
 # --- per-user scoped services ----------------------------------------

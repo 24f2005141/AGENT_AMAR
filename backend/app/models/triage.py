@@ -48,6 +48,8 @@ class ClassificationMethod(str, Enum):
     DETERMINISTIC = "deterministic"
     #: Local scikit-learn model answered — the LLM call was avoided.
     ML = "ml"
+    #: TypeSafe Jev supplied a typed decision from the shared decision bundle.
+    JEV = "jev"
     LLM = "llm"
     LLM_FALLBACK_DETERMINISTIC = "llm_fallback_deterministic"
 

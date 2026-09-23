@@ -85,6 +85,7 @@ class ActionData(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     # --- additive: how the actions were detected ---
     detection_method: ClassificationMethod = ClassificationMethod.DETERMINISTIC
+    decision_routing: dict = Field(default_factory=dict)
 
 
 class LLMAction(BaseModel):

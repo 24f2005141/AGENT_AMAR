@@ -27,10 +27,16 @@ google-api-python-client>=2.100
 #   LLM_PROVIDER=openai    -> openai
 #   LLM_PROVIDER=anthropic -> anthropic
 #   LLM_PROVIDER=gemini    -> google-genai
+#   LLM_PROVIDER=groq      -> openai (Groq's OpenAI-compatible endpoint)
 #   LLM_PROVIDER=ollama    -> httpx (already required, see below); no SDK
 anthropic>=0.40
 openai>=1.40
 google-genai
+# --- Shared bounded decision layer (optional at runtime; imports remain lazy) ---
+# Jev uses OpenRouter's Decisions HTTP API via the existing httpx dependency.
+# Open-source local System-One decision model. Imported and checkpoint-loaded
+# lazily, so conventional/Jev deployments do not pay its RAM/startup cost.
+laya==0.3.5
 # --- Persistence: SQLite for local dev, PostgreSQL in production ---
 SQLAlchemy>=2.0,<3.0
 # Production driver. `postgresql+psycopg://…` (psycopg 3). Not needed for the

@@ -202,10 +202,38 @@ class Settings(BaseModel):
     ml_classifier_threshold: float = 0.85
     ml_classifier_model_path: str = "data/models/email_classifier.joblib"
 
+    # --- Shared typed decision layer (optional) ---
+    # Jev and Laya are deliberately separate from the generative LLM
+    # abstraction. One request/forward-pass answers all bounded questions for
+    # an email; Gemini/Groq remain the fallback for unresolved fields and for
+    # reply generation. ``typesafe_api_key`` is retained for compatibility with
+    # existing .env files, but the configured credential is an OpenRouter key.
+    decision_provider: str = "none"  # none | jev | laya
+    typesafe_api_key: str = ""
+    openrouter_api_key: str = ""
+    jev_model: str = "typesafe/jev-1.13"
+    jev_endpoint_url: str = "https://openrouter.ai/api/alpha/decisions"
+    jev_timeout_seconds: float = 30.0
+    jev_choice_confidence_threshold: float = 0.85
+    jev_noul_decision_threshold: float = 0.85
+    jev_cache_size: int = 512
+    jev_max_state_chars: int = 6000
+    laya_model_id: str = "convaiinnovations/laya"
+    laya_model_subfolder: str = "typed-decisions"
+    laya_device: str = "cpu"
+    ai_mode_state_path: str = "data/ai_mode.json"
+
     # --- LLM abstraction (Phase 3) ---
-    llm_provider: str = "none"  # none | openai | anthropic | gemini | ollama
+    llm_provider: str = "none"  # none | openai | anthropic | gemini | groq | ollama
     llm_model: str = ""
     llm_api_key: str = ""
+    # Optional automatic failover. The primary provider is always attempted
+    # first; this provider is used only when the primary is unavailable or
+    # returns unusable JSON. Its key/model are deliberately separate so two
+    # vendors can be configured without overloading LLM_API_KEY.
+    llm_fallback_provider: str = "none"
+    llm_fallback_model: str = ""
+    llm_fallback_api_key: str = ""
     llm_max_tokens: int = 512
     llm_timeout_seconds: float = 45.0
     # Drafting 3 reply options needs a longer generation than a small
@@ -271,17 +299,45 @@ class Settings(BaseModel):
 
     @property
     def llm_configured(self) -> bool:
-        """True when the selected provider has what it needs to run.
+        """True when the primary or fallback provider can run.
 
-        ``openai`` / ``anthropic`` / ``gemini`` need an API key; ``ollama`` needs
-        only a model name; ``none`` (and anything unknown) is never configured.
+        Remote providers need an API key; ``ollama`` needs only a model name;
+        ``none`` (and anything unknown) is never configured.
         """
-        provider = self.llm_provider.strip().lower()
-        if provider in {"openai", "anthropic", "gemini"}:
-            return bool(self.llm_api_key)
-        if provider == "ollama":
-            return bool(self.llm_model)
-        return False
+        def configured(provider: str, api_key: str, model: str) -> bool:
+            provider = provider.strip().lower()
+            if provider in {"openai", "anthropic", "gemini", "groq"}:
+                return bool(api_key)
+            if provider == "ollama":
+                return bool(model)
+            return False
+
+        return configured(self.llm_provider, self.llm_api_key, self.llm_model) or configured(
+            self.llm_fallback_provider,
+            self.llm_fallback_api_key,
+            self.llm_fallback_model,
+        )
+
+    @property
+    def jev_configured(self) -> bool:
+        return (
+            self.decision_provider.strip().lower() == "jev"
+            and bool(self.jev_api_key)
+        )
+
+    @property
+    def jev_api_key(self) -> str:
+        """OpenRouter credential, with the legacy variable as fallback."""
+        return (self.openrouter_api_key or self.typesafe_api_key).strip()
+
+    @property
+    def laya_configured(self) -> bool:
+        return self.decision_provider.strip().lower() == "laya"
+
+    @property
+    def ai_mode_state_path_resolved(self) -> Path:
+        path = Path(self.ai_mode_state_path)
+        return path if path.is_absolute() else _BACKEND_DIR / path
 
     @property
     def is_production(self) -> bool:

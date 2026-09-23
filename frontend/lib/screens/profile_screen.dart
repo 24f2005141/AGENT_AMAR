@@ -21,7 +21,7 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
       body: ListenableBuilder(
-        listenable: authController,
+        listenable: Listenable.merge([authController, inboxController]),
         builder: (context, _) {
           final user = authController.currentUser;
           final gmailOk = authController.gmailConnected;
@@ -40,11 +40,18 @@ class ProfileScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(user?.displayName ?? 'Signed in',
-                            style: AppTheme.heading(fontSize: 16)),
+                        Text(
+                          user?.displayName ?? 'Signed in',
+                          style: AppTheme.heading(fontSize: 16),
+                        ),
                         const SizedBox(height: 2),
-                        Text(user?.googleEmail ?? '—',
-                            style: AppTheme.body(fontSize: 12, color: AppColors.textSecondary)),
+                        Text(
+                          user?.googleEmail ?? '—',
+                          style: AppTheme.body(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -60,8 +67,11 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(gmailOk ? Icons.check_circle : Icons.error_outline,
-                        color: gmailOk ? AppColors.success : AppColors.high, size: 20),
+                    Icon(
+                      gmailOk ? Icons.check_circle : Icons.error_outline,
+                      color: gmailOk ? AppColors.success : AppColors.high,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -75,20 +85,39 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+              _aiModeCard(context),
+              const SizedBox(height: 20),
               if (!gmailOk)
-                _action(context, Icons.link, 'Reconnect Gmail', AppColors.warmBeige, () async {
-                  await authController.reconnectGmail();
-                  await inboxController.checkGmailStatus();
-                }),
-              _action(context, Icons.link_off, 'Disconnect Gmail', AppColors.textSecondary,
+                _action(
+                  context,
+                  Icons.link,
+                  'Reconnect Gmail',
+                  AppColors.warmBeige,
                   () async {
-                await inboxController.disconnectGmail();
-                await authController.refreshMe();
-              }),
-              _action(context, Icons.logout, 'Log out', AppColors.critical, () async {
-                await authController.logout();
-                if (context.mounted) Navigator.of(context).pop();
-              }),
+                    await authController.reconnectGmail();
+                    await inboxController.checkGmailStatus();
+                  },
+                ),
+              _action(
+                context,
+                Icons.link_off,
+                'Disconnect Gmail',
+                AppColors.textSecondary,
+                () async {
+                  await inboxController.disconnectGmail();
+                  await authController.refreshMe();
+                },
+              ),
+              _action(
+                context,
+                Icons.logout,
+                'Log out',
+                AppColors.critical,
+                () async {
+                  await authController.logout();
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+              ),
             ],
           );
         },
@@ -96,8 +125,101 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _action(BuildContext context, IconData icon, String label, Color color,
-      Future<void> Function() onTap) {
+  Widget _aiModeCard(BuildContext context) {
+    final mode = inboxController.aiMode;
+    final options = mode?.options ?? const [];
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('AI processing mode', style: AppTheme.heading(fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(
+            'Choose how AMAR classifies uncertain email. Reply drafting still uses Gemini with Groq fallback.',
+            style: AppTheme.body(fontSize: 11, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          if (mode == null)
+            const LinearProgressIndicator()
+          else
+            InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Active approach',
+                border: OutlineInputBorder(),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  key: const ValueKey('ai-mode-selector'),
+                  value: mode.selected,
+                  isExpanded: true,
+                  isDense: true,
+                  items: [
+                    for (final option in options)
+                      DropdownMenuItem<String>(
+                        value: option.id,
+                        enabled: option.available,
+                        child: Text(
+                          option.available
+                              ? option.label
+                              : '${option.label} (unavailable)',
+                        ),
+                      ),
+                  ],
+                  onChanged: inboxController.isAiModeUpdating
+                      ? null
+                      : (value) async {
+                          if (value == null) return;
+                          final ok = await inboxController.selectAiMode(value);
+                          if (!ok && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  inboxController.aiModeError ??
+                                      'Could not change AI mode',
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                ),
+              ),
+            ),
+          if (inboxController.isAiModeUpdating) ...[
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(),
+          ],
+          if (mode != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              options
+                      .where((option) => option.id == mode.selected)
+                      .firstOrNull
+                      ?.detail ??
+                  '',
+              style: AppTheme.body(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _action(
+    BuildContext context,
+    IconData icon,
+    String label,
+    Color color,
+    Future<void> Function() onTap,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: ListTile(

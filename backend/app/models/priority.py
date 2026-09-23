@@ -45,6 +45,7 @@ class ProximityBucket(str, Enum):
 
 class ScoringMethod(str, Enum):
     DETERMINISTIC = "deterministic"
+    JEV_ADJUSTED = "deterministic+jev_adjustment"
     LLM_ADJUSTED = "deterministic+llm_adjustment"
     LLM_UNAVAILABLE = "deterministic+llm_unavailable"
 
@@ -83,6 +84,7 @@ class PriorityData(BaseModel):
     overrides_applied: list[str] = Field(default_factory=list)
     scoring_method: ScoringMethod = ScoringMethod.DETERMINISTIC
     reference_time_used: str = Field(description="ISO 8601 instant used for proximity.")
+    decision_routing: dict = Field(default_factory=dict)
 
 
 class LLMPriorityAdjustment(BaseModel):

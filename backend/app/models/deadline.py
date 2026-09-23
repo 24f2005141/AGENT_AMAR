@@ -89,6 +89,7 @@ class DeadlineData(BaseModel):
     deadlines: list[DeadlineItem] = Field(default_factory=list)
     event_dates: list[EventDate] = Field(default_factory=list)
     detection_method: ClassificationMethod = ClassificationMethod.DETERMINISTIC
+    decision_routing: dict = Field(default_factory=dict)
 
 
 class LLMDeadline(BaseModel):

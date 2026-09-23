@@ -1,0 +1,1245 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-22T16:25:25.213942+00:00",
+  "parameters": {
+    "runs": 5,
+    "warmups": 1,
+    "deterministic_iterations": 500,
+    "max_output_tokens": 512
+  },
+  "configuration": {
+    "primary_provider": "gemini",
+    "primary_model": "gemini-3.5-flash-lite",
+    "fallback_provider": "groq",
+    "fallback_model": "openai/gpt-oss-20b",
+    "timeout_seconds": 45.0,
+    "keys_recorded": false
+  },
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.15",
+    "logical_cpus": 8,
+    "packages": {
+      "google-genai": "2.24.0",
+      "openai": "3.17.0",
+      "pydantic": "2.13.5"
+    }
+  },
+  "prompt_fingerprints": {
+    "triage": "7eb0b4be53631954",
+    "action": "794fcbdcf2025f54",
+    "deadline": "a2fbd1ba3849fcbf",
+    "priority": "8f8373dcf552692f"
+  },
+  "deterministic_fast_path": {
+    "triage": {
+      "iterations": 500,
+      "latency_ms": {
+        "mean": 0.1627224,
+        "p50": 0.1426,
+        "p95": 0.22633999999999996,
+        "min": 0.1376,
+        "max": 1.0838
+      }
+    },
+    "action": {
+      "iterations": 500,
+      "latency_ms": {
+        "mean": 0.6758054,
+        "p50": 0.2277,
+        "p95": 1.3368699999999905,
+        "min": 0.2141,
+        "max": 21.5736
+      }
+    },
+    "deadline": {
+      "iterations": 500,
+      "latency_ms": {
+        "mean": 0.4724092,
+        "p50": 0.3781,
+        "p95": 0.9460999999999988,
+        "min": 0.3613,
+        "max": 2.7552
+      }
+    },
+    "priority": {
+      "iterations": 500,
+      "latency_ms": {
+        "mean": 0.1954966,
+        "p50": 0.1648,
+        "p95": 0.3130949999999999,
+        "min": 0.1569,
+        "max": 1.3974
+      }
+    }
+  },
+  "routing_census": {
+    "dataset": "backend/data/eval/email_eval_dataset.jsonl",
+    "synthetic_messages": 58,
+    "dataset_kinds": {
+      "clear": 31,
+      "ambiguous": 18,
+      "conflict": 6,
+      "safety": 3
+    },
+    "routing_methods": {
+      "deterministic": 22,
+      "llm": 36
+    },
+    "llm_invoked": 36,
+    "llm_invocation_rate": 0.6206896551724138,
+    "deterministic_confidence": {
+      "mean": 0.5596172413793103,
+      "p50": 0.52,
+      "p95": 0.8889999999999999
+    },
+    "trained_ml_model_present": false
+  },
+  "providers": {
+    "gemini": {
+      "provider": "gemini",
+      "configured": true,
+      "configured_model": "gemini-3.5-flash-lite",
+      "warmups": 1,
+      "runs_per_task": 5,
+      "tasks": {
+        "triage": {
+          "prompt_fingerprint": "7eb0b4be53631954",
+          "system_chars": 1780,
+          "user_chars": 118,
+          "summary": {
+            "attempts": 5,
+            "successes": 2,
+            "success_rate": 0.4,
+            "schema_valid_rate": 0.4,
+            "scenario_match_rate": 0.4,
+            "latency_ms": {
+              "mean": 33870.892350008944,
+              "p50": 33870.892350008944,
+              "p95": 35452.09582501848,
+              "min": 32113.99959999835,
+              "max": 35627.78510001954
+            },
+            "attempt_latency_ms": {
+              "mean": 35453.52766001015,
+              "p50": 35627.78510001954,
+              "p95": 46147.55856000702,
+              "min": 17236.758800019743,
+              "max": 46149.566000007326
+            },
+            "failure_latency_ms": {
+              "mean": 36508.61786667762,
+              "p50": 46139.52880000579,
+              "p95": 46148.56228000717,
+              "min": 17236.758800019743,
+              "max": 46149.566000007326
+            },
+            "tokens_mean": {
+              "input": 457.0,
+              "output": 58.0,
+              "reasoning": null,
+              "total": 515.0
+            },
+            "tokens_observed_total": {
+              "input_tokens": 914,
+              "output_tokens": 116,
+              "reasoning_tokens": 0,
+              "total_tokens": 1030
+            },
+            "models_observed": [
+              "gemini-3.5-flash-lite"
+            ],
+            "error_types": {
+              "ServerError": 3
+            },
+            "http_statuses": {
+              "503": 1,
+              "504": 2
+            },
+            "api_statuses": {
+              "UNAVAILABLE": 1,
+              "DEADLINE_EXCEEDED": 2
+            },
+            "provider_error_codes": {}
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "triage",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 32113.99959999835,
+              "input_tokens": 457,
+              "output_tokens": 62,
+              "reasoning_tokens": null,
+              "total_tokens": 519,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 2,
+              "task": "triage",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 17236.758800019743,
+              "error_type": "ServerError",
+              "http_status": 503,
+              "api_status": "UNAVAILABLE",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 3,
+              "task": "triage",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 35627.78510001954,
+              "input_tokens": 457,
+              "output_tokens": 54,
+              "reasoning_tokens": null,
+              "total_tokens": 511,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 4,
+              "task": "triage",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 46139.52880000579,
+              "error_type": "ServerError",
+              "http_status": 504,
+              "api_status": "DEADLINE_EXCEEDED",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 5,
+              "task": "triage",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 46149.566000007326,
+              "error_type": "ServerError",
+              "http_status": 504,
+              "api_status": "DEADLINE_EXCEEDED",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            }
+          ]
+        },
+        "action": {
+          "prompt_fingerprint": "794fcbdcf2025f54",
+          "system_chars": 1702,
+          "user_chars": 161,
+          "summary": {
+            "attempts": 5,
+            "successes": 2,
+            "success_rate": 0.4,
+            "schema_valid_rate": 0.4,
+            "scenario_match_rate": 0.0,
+            "latency_ms": {
+              "mean": 33726.51560000668,
+              "p50": 33726.51560000668,
+              "p95": 34321.79756001424,
+              "min": 33065.09119999828,
+              "max": 34387.94000001508
+            },
+            "attempt_latency_ms": {
+              "mean": 28280.91429999913,
+              "p50": 33065.09119999828,
+              "p95": 44051.68576000142,
+              "min": 11599.179699987872,
+              "max": 46467.622199998004
+            },
+            "failure_latency_ms": {
+              "mean": 24650.513433327433,
+              "p50": 15884.738399996422,
+              "p95": 43409.33381999784,
+              "min": 11599.179699987872,
+              "max": 46467.622199998004
+            },
+            "tokens_mean": {
+              "input": 458.0,
+              "output": 12.0,
+              "reasoning": null,
+              "total": 470.0
+            },
+            "tokens_observed_total": {
+              "input_tokens": 916,
+              "output_tokens": 24,
+              "reasoning_tokens": 0,
+              "total_tokens": 940
+            },
+            "models_observed": [
+              "gemini-3.5-flash-lite"
+            ],
+            "error_types": {
+              "ServerError": 3
+            },
+            "http_statuses": {
+              "504": 1,
+              "503": 2
+            },
+            "api_statuses": {
+              "DEADLINE_EXCEEDED": 1,
+              "UNAVAILABLE": 2
+            },
+            "provider_error_codes": {}
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "action",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 34387.94000001508,
+              "input_tokens": 458,
+              "output_tokens": 12,
+              "reasoning_tokens": null,
+              "total_tokens": 470,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 2,
+              "task": "action",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 46467.622199998004,
+              "error_type": "ServerError",
+              "http_status": 504,
+              "api_status": "DEADLINE_EXCEEDED",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 3,
+              "task": "action",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 11599.179699987872,
+              "error_type": "ServerError",
+              "http_status": 503,
+              "api_status": "UNAVAILABLE",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 4,
+              "task": "action",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 33065.09119999828,
+              "input_tokens": 458,
+              "output_tokens": 12,
+              "reasoning_tokens": null,
+              "total_tokens": 470,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 5,
+              "task": "action",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 15884.738399996422,
+              "error_type": "ServerError",
+              "http_status": 503,
+              "api_status": "UNAVAILABLE",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            }
+          ]
+        },
+        "deadline": {
+          "prompt_fingerprint": "a2fbd1ba3849fcbf",
+          "system_chars": 1490,
+          "user_chars": 289,
+          "summary": {
+            "attempts": 5,
+            "successes": 2,
+            "success_rate": 0.4,
+            "schema_valid_rate": 0.4,
+            "scenario_match_rate": 0.0,
+            "latency_ms": {
+              "mean": 31996.41239999619,
+              "p50": 31996.41239999619,
+              "p95": 39113.86817998864,
+              "min": 24088.128200004576,
+              "max": 39904.6965999878
+            },
+            "attempt_latency_ms": {
+              "mean": 15782.522900006734,
+              "p50": 6009.432300023036,
+              "p95": 36741.382919991156,
+              "min": 4427.650400000857,
+              "max": 39904.6965999878
+            },
+            "failure_latency_ms": {
+              "mean": 4973.263233347097,
+              "p50": 4482.707000017399,
+              "p95": 5856.7597700224715,
+              "min": 4427.650400000857,
+              "max": 6009.432300023036
+            },
+            "tokens_mean": {
+              "input": 510.0,
+              "output": 13.0,
+              "reasoning": null,
+              "total": 523.0
+            },
+            "tokens_observed_total": {
+              "input_tokens": 1020,
+              "output_tokens": 26,
+              "reasoning_tokens": 0,
+              "total_tokens": 1046
+            },
+            "models_observed": [
+              "gemini-3.5-flash-lite"
+            ],
+            "error_types": {
+              "ServerError": 3
+            },
+            "http_statuses": {
+              "503": 3
+            },
+            "api_statuses": {
+              "UNAVAILABLE": 3
+            },
+            "provider_error_codes": {}
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "deadline",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 4482.707000017399,
+              "error_type": "ServerError",
+              "http_status": 503,
+              "api_status": "UNAVAILABLE",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 2,
+              "task": "deadline",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 39904.6965999878,
+              "input_tokens": 510,
+              "output_tokens": 13,
+              "reasoning_tokens": null,
+              "total_tokens": 523,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 3,
+              "task": "deadline",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 4427.650400000857,
+              "error_type": "ServerError",
+              "http_status": 503,
+              "api_status": "UNAVAILABLE",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 4,
+              "task": "deadline",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 6009.432300023036,
+              "error_type": "ServerError",
+              "http_status": 503,
+              "api_status": "UNAVAILABLE",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 5,
+              "task": "deadline",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 24088.128200004576,
+              "input_tokens": 510,
+              "output_tokens": 13,
+              "reasoning_tokens": null,
+              "total_tokens": 523,
+              "model_observed": "gemini-3.5-flash-lite"
+            }
+          ]
+        },
+        "priority": {
+          "prompt_fingerprint": "8f8373dcf552692f",
+          "system_chars": 708,
+          "user_chars": 223,
+          "summary": {
+            "attempts": 5,
+            "successes": 4,
+            "success_rate": 0.8,
+            "schema_valid_rate": 0.8,
+            "scenario_match_rate": 0.8,
+            "latency_ms": {
+              "mean": 34890.49932498892,
+              "p50": 33619.28144999547,
+              "p95": 44309.07764997828,
+              "min": 26655.067699990468,
+              "max": 45668.366699974285
+            },
+            "attempt_latency_ms": {
+              "mean": 37182.240799989086,
+              "p50": 36606.43970000092,
+              "p95": 46213.038699986646,
+              "min": 26655.067699990468,
+              "max": 46349.206699989736
+            },
+            "failure_latency_ms": {
+              "mean": 46349.206699989736,
+              "p50": 46349.206699989736,
+              "p95": 46349.206699989736,
+              "min": 46349.206699989736,
+              "max": 46349.206699989736
+            },
+            "tokens_mean": {
+              "input": 220.0,
+              "output": 32.5,
+              "reasoning": null,
+              "total": 252.5
+            },
+            "tokens_observed_total": {
+              "input_tokens": 880,
+              "output_tokens": 130,
+              "reasoning_tokens": 0,
+              "total_tokens": 1010
+            },
+            "models_observed": [
+              "gemini-3.5-flash-lite"
+            ],
+            "error_types": {
+              "ServerError": 1
+            },
+            "http_statuses": {
+              "504": 1
+            },
+            "api_statuses": {
+              "DEADLINE_EXCEEDED": 1
+            },
+            "provider_error_codes": {}
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "priority",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 45668.366699974285,
+              "input_tokens": 220,
+              "output_tokens": 37,
+              "reasoning_tokens": null,
+              "total_tokens": 257,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 2,
+              "task": "priority",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 30632.12319999002,
+              "input_tokens": 220,
+              "output_tokens": 34,
+              "reasoning_tokens": null,
+              "total_tokens": 254,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 3,
+              "task": "priority",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 36606.43970000092,
+              "input_tokens": 220,
+              "output_tokens": 28,
+              "reasoning_tokens": null,
+              "total_tokens": 248,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 4,
+              "task": "priority",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 26655.067699990468,
+              "input_tokens": 220,
+              "output_tokens": 31,
+              "reasoning_tokens": null,
+              "total_tokens": 251,
+              "model_observed": "gemini-3.5-flash-lite"
+            },
+            {
+              "run": 5,
+              "task": "priority",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 46349.206699989736,
+              "error_type": "ServerError",
+              "http_status": 504,
+              "api_status": "DEADLINE_EXCEEDED",
+              "provider_error_type": null,
+              "provider_error_code": null,
+              "provider_error_param": null
+            }
+          ]
+        }
+      },
+      "overall": {
+        "attempts": 20,
+        "successes": 10,
+        "success_rate": 0.5,
+        "schema_valid_rate": 0.5,
+        "scenario_match_rate": 0.3,
+        "latency_ms": {
+          "mean": 33874.96379999793,
+          "p50": 33726.51560000668,
+          "p95": 43074.71515498037,
+          "min": 24088.128200004576,
+          "max": 45668.366699974285
+        },
+        "attempt_latency_ms": {
+          "mean": 29174.801415001275,
+          "p50": 32589.545399998315,
+          "p95": 46355.12747499015,
+          "min": 4427.650400000857,
+          "max": 46467.622199998004
+        },
+        "failure_latency_ms": {
+          "mean": 24474.63903000462,
+          "p50": 16560.748600008083,
+          "p95": 46414.33522499428,
+          "min": 4427.650400000857,
+          "max": 46467.622199998004
+        },
+        "tokens_mean": {
+          "input": 373.0,
+          "output": 29.6,
+          "reasoning": null,
+          "total": 402.6
+        },
+        "tokens_observed_total": {
+          "input_tokens": 3730,
+          "output_tokens": 296,
+          "reasoning_tokens": 0,
+          "total_tokens": 4026
+        },
+        "models_observed": [
+          "gemini-3.5-flash-lite"
+        ],
+        "error_types": {
+          "ServerError": 10
+        },
+        "http_statuses": {
+          "503": 6,
+          "504": 4
+        },
+        "api_statuses": {
+          "UNAVAILABLE": 6,
+          "DEADLINE_EXCEEDED": 4
+        },
+        "provider_error_codes": {}
+      }
+    },
+    "groq": {
+      "provider": "groq",
+      "configured": true,
+      "configured_model": "openai/gpt-oss-20b",
+      "warmups": 1,
+      "runs_per_task": 5,
+      "tasks": {
+        "triage": {
+          "prompt_fingerprint": "7eb0b4be53631954",
+          "system_chars": 1780,
+          "user_chars": 118,
+          "summary": {
+            "attempts": 5,
+            "successes": 4,
+            "success_rate": 0.8,
+            "schema_valid_rate": 0.8,
+            "scenario_match_rate": 0.8,
+            "latency_ms": {
+              "mean": 801.7435000001569,
+              "p50": 827.6845499931369,
+              "p95": 918.299025009037,
+              "min": 620.9185000043362,
+              "max": 930.6864000100177
+            },
+            "attempt_latency_ms": {
+              "mean": 874.3068600015249,
+              "p50": 848.1039000034798,
+              "p95": 1117.785520007601,
+              "min": 620.9185000043362,
+              "max": 1164.5603000069968
+            },
+            "failure_latency_ms": {
+              "mean": 1164.5603000069968,
+              "p50": 1164.5603000069968,
+              "p95": 1164.5603000069968,
+              "min": 1164.5603000069968,
+              "max": 1164.5603000069968
+            },
+            "tokens_mean": {
+              "input": 536.0,
+              "output": 224.25,
+              "reasoning": 170.25,
+              "total": 760.25
+            },
+            "tokens_observed_total": {
+              "input_tokens": 2144,
+              "output_tokens": 897,
+              "reasoning_tokens": 681,
+              "total_tokens": 3041
+            },
+            "models_observed": [
+              "openai/gpt-oss-20b"
+            ],
+            "error_types": {
+              "BadRequestError": 1
+            },
+            "http_statuses": {
+              "400": 1
+            },
+            "api_statuses": {},
+            "provider_error_codes": {
+              "json_validate_failed": 1
+            }
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "triage",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 807.265199982794,
+              "input_tokens": 536,
+              "output_tokens": 213,
+              "reasoning_tokens": 153,
+              "total_tokens": 749,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 2,
+              "task": "triage",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 1164.5603000069968,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": "json_validate_failed",
+              "provider_error_param": null
+            },
+            {
+              "run": 3,
+              "task": "triage",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 620.9185000043362,
+              "input_tokens": 536,
+              "output_tokens": 240,
+              "reasoning_tokens": 189,
+              "total_tokens": 776,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 4,
+              "task": "triage",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 848.1039000034798,
+              "input_tokens": 536,
+              "output_tokens": 248,
+              "reasoning_tokens": 198,
+              "total_tokens": 784,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 5,
+              "task": "triage",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 930.6864000100177,
+              "input_tokens": 536,
+              "output_tokens": 196,
+              "reasoning_tokens": 141,
+              "total_tokens": 732,
+              "model_observed": "openai/gpt-oss-20b"
+            }
+          ]
+        },
+        "action": {
+          "prompt_fingerprint": "794fcbdcf2025f54",
+          "system_chars": 1702,
+          "user_chars": 161,
+          "summary": {
+            "attempts": 5,
+            "successes": 4,
+            "success_rate": 0.8,
+            "schema_valid_rate": 0.8,
+            "scenario_match_rate": 0.2,
+            "latency_ms": {
+              "mean": 979.7271499992348,
+              "p50": 892.0431500009727,
+              "p95": 1309.9632749974262,
+              "min": 770.2996000007261,
+              "max": 1364.522699994268
+            },
+            "attempt_latency_ms": {
+              "mean": 1054.4304399983957,
+              "p50": 1000.7932000153232,
+              "p95": 1362.2668799944222,
+              "min": 770.2996000007261,
+              "max": 1364.522699994268
+            },
+            "failure_latency_ms": {
+              "mean": 1353.2435999950394,
+              "p50": 1353.2435999950394,
+              "p95": 1353.2435999950394,
+              "min": 1353.2435999950394,
+              "max": 1353.2435999950394
+            },
+            "tokens_mean": {
+              "input": 524.0,
+              "output": 275.5,
+              "reasoning": 242.0,
+              "total": 799.5
+            },
+            "tokens_observed_total": {
+              "input_tokens": 2096,
+              "output_tokens": 1102,
+              "reasoning_tokens": 968,
+              "total_tokens": 3198
+            },
+            "models_observed": [
+              "openai/gpt-oss-20b"
+            ],
+            "error_types": {
+              "BadRequestError": 1
+            },
+            "http_statuses": {
+              "400": 1
+            },
+            "api_statuses": {},
+            "provider_error_codes": {
+              "json_validate_failed": 1
+            }
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "action",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 1364.522699994268,
+              "input_tokens": 524,
+              "output_tokens": 500,
+              "reasoning_tokens": 426,
+              "total_tokens": 1024,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 2,
+              "task": "action",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 770.2996000007261,
+              "input_tokens": 524,
+              "output_tokens": 158,
+              "reasoning_tokens": 138,
+              "total_tokens": 682,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 3,
+              "task": "action",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 1000.7932000153232,
+              "input_tokens": 524,
+              "output_tokens": 272,
+              "reasoning_tokens": 252,
+              "total_tokens": 796,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 4,
+              "task": "action",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 1353.2435999950394,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": "json_validate_failed",
+              "provider_error_param": null
+            },
+            {
+              "run": 5,
+              "task": "action",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": false,
+              "latency_ms": 783.2930999866221,
+              "input_tokens": 524,
+              "output_tokens": 172,
+              "reasoning_tokens": 152,
+              "total_tokens": 696,
+              "model_observed": "openai/gpt-oss-20b"
+            }
+          ]
+        },
+        "deadline": {
+          "prompt_fingerprint": "a2fbd1ba3849fcbf",
+          "system_chars": 1490,
+          "user_chars": 289,
+          "summary": {
+            "attempts": 5,
+            "successes": 3,
+            "success_rate": 0.6,
+            "schema_valid_rate": 0.6,
+            "scenario_match_rate": 0.6,
+            "latency_ms": {
+              "mean": 7394.743333318426,
+              "p50": 7449.0778999752365,
+              "p95": 9201.097729976755,
+              "min": 5339.385500003118,
+              "max": 9395.766599976923
+            },
+            "attempt_latency_ms": {
+              "mean": 6214.4742199918255,
+              "p50": 5339.385500003118,
+              "p95": 9006.428859976586,
+              "min": 4280.510200012941,
+              "max": 9395.766599976923
+            },
+            "failure_latency_ms": {
+              "mean": 4444.070550001925,
+              "p50": 4444.070550001925,
+              "p95": 4591.27486499201,
+              "min": 4280.510200012941,
+              "max": 4607.630899990909
+            },
+            "tokens_mean": {
+              "input": 565.0,
+              "output": 487.3333333333333,
+              "reasoning": 397.3333333333333,
+              "total": 1052.3333333333333
+            },
+            "tokens_observed_total": {
+              "input_tokens": 1695,
+              "output_tokens": 1462,
+              "reasoning_tokens": 1192,
+              "total_tokens": 3157
+            },
+            "models_observed": [
+              "openai/gpt-oss-20b"
+            ],
+            "error_types": {
+              "BadRequestError": 2
+            },
+            "http_statuses": {
+              "400": 2
+            },
+            "api_statuses": {},
+            "provider_error_codes": {
+              "json_validate_failed": 2
+            }
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "deadline",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 4280.510200012941,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": "json_validate_failed",
+              "provider_error_param": null
+            },
+            {
+              "run": 2,
+              "task": "deadline",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 4607.630899990909,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": "json_validate_failed",
+              "provider_error_param": null
+            },
+            {
+              "run": 3,
+              "task": "deadline",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 7449.0778999752365,
+              "input_tokens": 565,
+              "output_tokens": 459,
+              "reasoning_tokens": 370,
+              "total_tokens": 1024,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 4,
+              "task": "deadline",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 5339.385500003118,
+              "input_tokens": 565,
+              "output_tokens": 509,
+              "reasoning_tokens": 419,
+              "total_tokens": 1074,
+              "model_observed": "openai/gpt-oss-20b"
+            },
+            {
+              "run": 5,
+              "task": "deadline",
+              "success": true,
+              "schema_valid": true,
+              "scenario_match": true,
+              "latency_ms": 9395.766599976923,
+              "input_tokens": 565,
+              "output_tokens": 494,
+              "reasoning_tokens": 403,
+              "total_tokens": 1059,
+              "model_observed": "openai/gpt-oss-20b"
+            }
+          ]
+        },
+        "priority": {
+          "prompt_fingerprint": "8f8373dcf552692f",
+          "system_chars": 708,
+          "user_chars": 223,
+          "summary": {
+            "attempts": 5,
+            "successes": 0,
+            "success_rate": 0.0,
+            "schema_valid_rate": 0.0,
+            "scenario_match_rate": 0.0,
+            "latency_ms": {
+              "mean": null,
+              "p50": null,
+              "p95": null,
+              "min": null,
+              "max": null
+            },
+            "attempt_latency_ms": {
+              "mean": 539.342979999492,
+              "p50": 250.985100021353,
+              "p95": 1412.711339985253,
+              "min": 149.0570000023581,
+              "max": 1646.749399980763
+            },
+            "failure_latency_ms": {
+              "mean": 539.342979999492,
+              "p50": 250.985100021353,
+              "p95": 1412.711339985253,
+              "min": 149.0570000023581,
+              "max": 1646.749399980763
+            },
+            "tokens_mean": {
+              "input": null,
+              "output": null,
+              "reasoning": null,
+              "total": null
+            },
+            "tokens_observed_total": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "reasoning_tokens": 0,
+              "total_tokens": 0
+            },
+            "models_observed": [],
+            "error_types": {
+              "BadRequestError": 5
+            },
+            "http_statuses": {
+              "400": 5
+            },
+            "api_statuses": {},
+            "provider_error_codes": {}
+          },
+          "runs": [
+            {
+              "run": 1,
+              "task": "priority",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 476.55910000321455,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 2,
+              "task": "priority",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 1646.749399980763,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 3,
+              "task": "priority",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 149.0570000023581,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 4,
+              "task": "priority",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 250.985100021353,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": null,
+              "provider_error_param": null
+            },
+            {
+              "run": 5,
+              "task": "priority",
+              "success": false,
+              "schema_valid": false,
+              "scenario_match": false,
+              "latency_ms": 173.3642999897711,
+              "error_type": "BadRequestError",
+              "http_status": 400,
+              "api_status": null,
+              "provider_error_type": "invalid_request_error",
+              "provider_error_code": null,
+              "provider_error_param": null
+            }
+          ]
+        }
+      },
+      "overall": {
+        "attempts": 20,
+        "successes": 11,
+        "success_rate": 0.55,
+        "schema_valid_rate": 0.55,
+        "scenario_match_rate": 0.4,
+        "latency_ms": {
+          "mean": 2664.555690904804,
+          "p50": 930.6864000100177,
+          "p95": 8422.42224997608,
+          "min": 620.9185000043362,
+          "max": 9395.766599976923
+        },
+        "attempt_latency_ms": {
+          "mean": 2170.6386249978095,
+          "p50": 965.7398000126705,
+          "p95": 7546.412334975322,
+          "min": 149.0570000023581,
+          "max": 9395.766599976923
+        },
+        "failure_latency_ms": {
+          "mean": 1566.962211111483,
+          "p50": 1164.5603000069968,
+          "p95": 4476.782619999722,
+          "min": 149.0570000023581,
+          "max": 4607.630899990909
+        },
+        "tokens_mean": {
+          "input": 539.5454545454545,
+          "output": 314.6363636363636,
+          "reasoning": 258.27272727272725,
+          "total": 854.1818181818181
+        },
+        "tokens_observed_total": {
+          "input_tokens": 5935,
+          "output_tokens": 3461,
+          "reasoning_tokens": 2841,
+          "total_tokens": 9396
+        },
+        "models_observed": [
+          "openai/gpt-oss-20b"
+        ],
+        "error_types": {
+          "BadRequestError": 9
+        },
+        "http_statuses": {
+          "400": 9
+        },
+        "api_statuses": {},
+        "provider_error_codes": {
+          "json_validate_failed": 4
+        }
+      }
+    }
+  }
+}

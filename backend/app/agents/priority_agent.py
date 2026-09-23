@@ -45,6 +45,7 @@ from app.services.llm_service import (
     LLMUnavailableError,
     NullLLMClient,
 )
+from app.services.decision_service import JevDecisionBundle
 from app.services.priority_context import PriorityContext, StaticPriorityContext
 from app.utils import priority_scoring as ps
 
@@ -115,6 +116,8 @@ class PriorityAgent:
         deadline: AgentOutput | None = None,
         *,
         now: datetime | None = None,
+        decision: JevDecisionBundle | None = None,
+        allow_remote: bool = True,
     ) -> AgentOutput:
         started_at = self._now()
         errors: list[AgentError] = []
@@ -152,7 +155,29 @@ class PriorityAgent:
         adjustment = 0
         conflict = self._signals_conflict(sig, base_score)
         llm_ran = False
-        if conflict and self._llm.is_available:
+        jev_accepted = False
+        if conflict and decision is not None:
+            value = decision.accepted_choice(
+                "priority_adjustment", self.settings.jev_choice_confidence_threshold
+            )
+            if value is not None:
+                try:
+                    cap = self.settings.priority_llm_max_adjustment
+                    adjustment = int(max(-cap, min(cap, int(value))))
+                    jev_accepted = True
+                    scoring_method = ScoringMethod.JEV_ADJUSTED
+                    if adjustment:
+                        breakdown.append(
+                            ps.ScoreFactor(
+                                factor="jev_context_adjustment",
+                                points=adjustment,
+                                detail="bounded typed nudge for conflicting signals",
+                            )
+                        )
+                except ValueError:
+                    jev_accepted = False
+
+        if conflict and not jev_accepted and allow_remote and self._llm.is_available:
             llm_ran = True
             try:
                 adjustment = self._llm_adjust(email, sig, base_score, bucket)
@@ -180,6 +205,13 @@ class PriorityAgent:
         monitor = self._decide_monitor(sig, is_past, forced_monitor)
         confidence = self._confidence(sig, conflict, safety_review, scoring_method)
         needs_review = self._needs_human_review(sig, level, conflict, llm_ran, safety_review)
+        if (
+            decision is not None
+            and decision.human_review is not None
+            and decision.human_review.probability
+            >= self.settings.jev_noul_decision_threshold
+        ):
+            needs_review = True
         reasoning = self._reasoning(sig, level, final_score, bucket, breakdown, overrides)
 
         data = PriorityData(
@@ -197,6 +229,12 @@ class PriorityAgent:
             overrides_applied=overrides,
             scoring_method=scoring_method,
             reference_time_used=now.isoformat(),
+            decision_routing={
+                "remote_decision_recommended": conflict,
+                "jev_accepted": jev_accepted,
+                "jev_cache_hit": bool(decision and decision.cache_hit),
+                "llm_invoked": llm_ran,
+            },
         )
         status = AgentStatus.PARTIAL if errors else AgentStatus.OK
         return AgentOutput(
@@ -414,7 +452,7 @@ class PriorityAgent:
             conf -= 0.08
         if safety_review:
             conf -= 0.12
-        if method == ScoringMethod.LLM_ADJUSTED:
+        if method in {ScoringMethod.LLM_ADJUSTED, ScoringMethod.JEV_ADJUSTED}:
             conf = min(conf, 0.85)
         return max(0.3, min(0.95, conf))
 

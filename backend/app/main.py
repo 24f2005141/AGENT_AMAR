@@ -141,7 +141,7 @@ if _cors_origins:
         CORSMiddleware,
         allow_origins=_cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 

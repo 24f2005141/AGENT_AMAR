@@ -33,6 +33,11 @@ os.environ["GMAIL_SYNC_ENABLED"] = "false"
 # suite offline and deterministic regardless of LLM_PROVIDER in .env.
 os.environ["LLM_PROVIDER"] = "none"
 os.environ["LLM_API_KEY"] = ""
+os.environ["LLM_FALLBACK_PROVIDER"] = "none"
+os.environ["LLM_FALLBACK_MODEL"] = ""
+os.environ["LLM_FALLBACK_API_KEY"] = ""
+os.environ["DECISION_PROVIDER"] = "none"
+os.environ["TYPESAFE_API_KEY"] = ""
 
 # Phase 16: never let the test suite touch Firebase. Push-specific tests inject a
 # fake FcmClient; everything else runs with push simply skipped.

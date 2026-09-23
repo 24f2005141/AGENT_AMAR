@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
+from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.db import session as db_session
@@ -57,6 +58,25 @@ def test_session_roundtrip_and_hashing(db, svc):
     assert resolved is not None and resolved.id == user.id
     assert svc.resolve("nonsense") is None
     assert svc.resolve(None) is None
+
+
+def test_resolve_remains_read_only_while_sqlite_writer_is_busy(db, svc):
+    """Auth must not turn an otherwise read-only request into a DB writer."""
+    user = svc.upsert_user(GoogleIdentity(sub="busy", email="busy@x.com"))
+    db.commit()
+    raw, _ = svc.create_session(user)
+    db.commit()
+
+    engine = db_session.get_engine()
+    with engine.connect() as writer:
+        writer.exec_driver_sql("BEGIN IMMEDIATE")
+        other = Session(engine, autoflush=False, expire_on_commit=False)
+        try:
+            resolved = AuthSessionService(other).resolve(raw)
+            assert resolved is not None and resolved.id == user.id
+        finally:
+            other.close()
+            writer.rollback()
 
 
 def test_expired_and_revoked_tokens_do_not_resolve(db, svc):
